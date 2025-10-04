@@ -47,6 +47,14 @@ def has_permission(permission):
     """Check if current user has a specific permission"""
     return permission in session.get('permissions', [])
 
+# Firebase availability check
+def check_firebase():
+    """Check if Firebase is available"""
+    if db is None:
+        flash('Firebase is not available. Please check your configuration.', 'error')
+        return False
+    return True
+
 # Performance monitoring decorator
 def performance_monitor(f):
     @wraps(f)
@@ -151,21 +159,32 @@ service_account_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
 firebase_credentials = None
 if service_account_json:
     try:
-        service_account_info = json.loads(service_account_json)
+        # Decode base64 if it's base64 encoded
+        if service_account_json.startswith('ewog'):  # Base64 encoded JSON starts with 'ewog'
+            import base64
+            decoded_json = base64.b64decode(service_account_json).decode('utf-8')
+            service_account_info = json.loads(decoded_json)
+        else:
+            # Try parsing as direct JSON
+            service_account_info = json.loads(service_account_json)
         firebase_credentials = credentials.Certificate(service_account_info)
-    except Exception:
+        print("Firebase credentials loaded from environment variable")
+    except Exception as e:
+        print(f"Error loading Firebase credentials from environment: {e}")
         firebase_credentials = None
 
 if firebase_credentials is None:
     service_account_file = os.environ.get('FIREBASE_CREDENTIALS_FILE', 'firebase-service-account.json')
     if os.path.exists(service_account_file):
-        firebase_credentials = credentials.Certificate(service_account_file)
-    else:
-        # Fall back to application default credentials if available
         try:
-            firebase_credentials = credentials.ApplicationDefault()
-        except Exception:
+            firebase_credentials = credentials.Certificate(service_account_file)
+            print("Firebase credentials loaded from file")
+        except Exception as e:
+            print(f"Error loading Firebase credentials from file: {e}")
             firebase_credentials = None
+    else:
+        print("No Firebase credentials found")
+        firebase_credentials = None
 
 firebase_options = {}
 env_storage_bucket = os.environ.get('FIREBASE_STORAGE_BUCKET')
@@ -174,10 +193,21 @@ resolved_storage_bucket = env_storage_bucket or config_storage_bucket
 if resolved_storage_bucket:
     firebase_options['storageBucket'] = resolved_storage_bucket
 
-firebase_admin.initialize_app(firebase_credentials, firebase_options or None)
-
-db = firestore.client()
-bucket = storage.bucket()
+# Initialize Firebase only if credentials are available
+if firebase_credentials:
+    try:
+        firebase_admin.initialize_app(firebase_credentials, firebase_options or None)
+        db = firestore.client()
+        bucket = storage.bucket()
+        print("Firebase initialized successfully")
+    except Exception as e:
+        print(f"Error initializing Firebase: {e}")
+        db = None
+        bucket = None
+else:
+    print("Firebase credentials not available - running without Firebase")
+    db = None
+    bucket = None
 
 # Configuration
 UPLOAD_FOLDER = 'static/uploads'
