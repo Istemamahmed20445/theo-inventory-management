@@ -2523,9 +2523,19 @@ def excel_export_delivery():
             # Handle both consolidated multiple items and individual items
             if order_data.get('is_multiple_items'):
                 # This is a consolidated multiple items order
-                grouped_deliveries[customer_key]['items'].extend(order_data.get('items', []))
+                # Add the parent order's delivery charge to each item
+                parent_delivery_charge = order_data.get('delivery_charge', 0)
+                for item in order_data.get('items', []):
+                    # Create a copy of the item with parent delivery info
+                    item_copy = item.copy()
+                    item_copy['parent_delivery_charge'] = parent_delivery_charge
+                    item_copy['is_from_multiple_items'] = True
+                    grouped_deliveries[customer_key]['items'].append(item_copy)
             else:
                 # This is a single item order
+                # Add delivery info directly to the item
+                order_data['parent_delivery_charge'] = order_data.get('delivery_charge', 0)
+                order_data['is_from_multiple_items'] = False
                 grouped_deliveries[customer_key]['items'].append(order_data)
         
         # Sort by delivery date (newest first)
@@ -2542,16 +2552,18 @@ def excel_export_delivery():
                     sheet.cell(row=row, column=2, value=customer_group['customer_phone'])
                     sheet.cell(row=row, column=3, value=customer_group['customer_address'])
                     
+                    # Get delivery charge from parent order
+                    parent_delivery_charge = item.get('parent_delivery_charge', 0)
+                    
                     # Determine delivery location based on delivery charge
-                    delivery_charge = item.get('delivery_charge', 0)
-                    if delivery_charge == 80:
+                    if parent_delivery_charge == 80:
                         delivery_location = "Inside Dhaka"
-                    elif delivery_charge == 130:
+                    elif parent_delivery_charge == 130:
                         delivery_location = "Outside Dhaka"
-                    elif delivery_charge == 0:
+                    elif parent_delivery_charge == 0:
                         delivery_location = "No Delivery"
                     else:
-                        delivery_location = f"Custom ({delivery_charge}৳)"
+                        delivery_location = f"Custom ({parent_delivery_charge}৳)"
                     sheet.cell(row=row, column=4, value=delivery_location)
                     
                     # Product information
@@ -2561,13 +2573,23 @@ def excel_export_delivery():
                     sheet.cell(row=row, column=8, value=item.get('quantity', item.get('item_numbers', 1)))
                     
                     # Price information - separate product price, delivery charge, and total
-                    product_price = item.get('product_total', 0)
-                    if product_price == 0:  # Fallback for older data
-                        product_price = item.get('total_price', 0) - delivery_charge
+                    # Handle different data structures for single vs multiple items
+                    if item.get('is_from_multiple_items'):
+                        # This is from a multiple items order - calculate product price
+                        product_price = item.get('product_price', 0) * item.get('quantity', 1)
+                        item_delivery_charge = 0  # Individual items don't have delivery charge
+                        item_total_price = product_price
+                    else:
+                        # This is a single item order - get price directly
+                        product_price = item.get('product_total', 0)
+                        if product_price == 0:  # Fallback for older data
+                            product_price = item.get('total_price', 0) - parent_delivery_charge
+                        item_delivery_charge = parent_delivery_charge
+                        item_total_price = item.get('total_price', 0)
                     
                     sheet.cell(row=row, column=9, value=product_price)
-                    sheet.cell(row=row, column=10, value=delivery_charge)
-                    sheet.cell(row=row, column=11, value=item.get('total_price', 0))
+                    sheet.cell(row=row, column=10, value=item_delivery_charge)
+                    sheet.cell(row=row, column=11, value=item_total_price)
                     
                     # Delivery information
                     delivery_date = customer_group['delivered_at']
