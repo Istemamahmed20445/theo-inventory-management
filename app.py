@@ -2458,6 +2458,153 @@ def excel_export_sales():
         flash(f'Error exporting sales: {str(e)}', 'error')
         return redirect(url_for('sales'))
 
+# Excel Export for Delivery (Only Delivered Items)
+@app.route('/excel_export_delivery')
+@login_required
+@permission_required('sales_customer')
+def excel_export_delivery():
+    try:
+        if not check_firebase():
+            return redirect(url_for('sales'))
+            
+        # Get date filter
+        date_filter = request.args.get('date', '')
+        
+        # Get sales orders - ONLY delivered items
+        sales_ref = db.collection('sales_orders')
+        sales_orders = sales_ref.get()
+        
+        # Filter by delivered status and date if provided
+        delivered_orders = []
+        for order in sales_orders:
+            order_data = order.to_dict()
+            
+            # Only include delivered items
+            if not order_data.get('delivered', False):
+                continue
+                
+            # Filter by date if provided
+            if date_filter:
+                order_date = order_data.get('created_at', datetime.now())
+                if isinstance(order_date, datetime):
+                    if order_date.strftime('%Y-%m-%d') != date_filter:
+                        continue
+                        
+            delivered_orders.append(order_data)
+        
+        if not delivered_orders:
+            flash('No delivered items found for export.', 'info')
+            return redirect(url_for('sales'))
+        
+        # Create Excel workbook
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Go for Delivery"
+        
+        # Headers for delivery export
+        headers = ['Customer Name', 'Phone', 'Address', 'Product Name', 'Size', 'Color', 'Quantity', 'Price', 'Delivery Date', 'Sold By']
+        for col, header in enumerate(headers, 1):
+            sheet.cell(row=1, column=col, value=header)
+        
+        # Group delivered sales by customer and consolidate all their items
+        grouped_deliveries = {}
+        for order_data in delivered_orders:
+            customer_key = f"{order_data.get('customer_name', '')}|{order_data.get('customer_phone', '')}"
+            if customer_key not in grouped_deliveries:
+                grouped_deliveries[customer_key] = {
+                    'customer_name': order_data.get('customer_name', ''),
+                    'customer_phone': order_data.get('customer_phone', ''),
+                    'customer_address': order_data.get('customer_address', ''),
+                    'sold_by': order_data.get('sold_by', ''),
+                    'delivered_at': order_data.get('delivered_at', ''),
+                    'items': []
+                }
+            
+            # Handle both consolidated multiple items and individual items
+            if order_data.get('is_multiple_items'):
+                # This is a consolidated multiple items order
+                grouped_deliveries[customer_key]['items'].extend(order_data.get('items', []))
+            else:
+                # This is a single item order
+                grouped_deliveries[customer_key]['items'].append(order_data)
+        
+        # Sort by delivery date (newest first)
+        grouped_list = list(grouped_deliveries.values())
+        grouped_list.sort(key=lambda x: x['delivered_at'], reverse=True)
+        
+        # Data - One row per item for detailed delivery list
+        row = 2
+        for customer_group in grouped_list:
+            for item in customer_group['items']:
+                if isinstance(item, dict):
+                    # Customer information
+                    sheet.cell(row=row, column=1, value=customer_group['customer_name'])
+                    sheet.cell(row=row, column=2, value=customer_group['customer_phone'])
+                    sheet.cell(row=row, column=3, value=customer_group['customer_address'])
+                    
+                    # Product information
+                    sheet.cell(row=row, column=4, value=item.get('product_name', ''))
+                    sheet.cell(row=row, column=5, value=item.get('product_size', ''))
+                    sheet.cell(row=row, column=6, value=item.get('product_color', ''))
+                    sheet.cell(row=row, column=7, value=item.get('quantity', item.get('item_numbers', 1)))
+                    sheet.cell(row=row, column=8, value=item.get('total_price', 0))
+                    
+                    # Delivery information
+                    delivery_date = customer_group['delivered_at']
+                    if delivery_date:
+                        if isinstance(delivery_date, datetime):
+                            sheet.cell(row=row, column=9, value=delivery_date.strftime('%Y-%m-%d %H:%M'))
+                        else:
+                            sheet.cell(row=row, column=9, value=str(delivery_date))
+                    else:
+                        sheet.cell(row=row, column=9, value='')
+                    
+                    sheet.cell(row=row, column=10, value=customer_group['sold_by'])
+                    row += 1
+        
+        # Auto-adjust column widths
+        for column in sheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            sheet.column_dimensions[column_letter].width = adjusted_width
+        
+        # Save to memory
+        output = io.BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        
+        # Generate filename
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        filename = f'delivery_export_{date_filter if date_filter else current_date}.xlsx'
+        
+        # Log activity
+        activity_data = {
+            'action': 'Delivery Export',
+            'details': f'Exported {len(delivered_orders)} delivered orders to Excel',
+            'user': session['username'],
+            'timestamp': datetime.now()
+        }
+        if db:
+            db.collection('activities').add(activity_data)
+        
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        flash(f'Error exporting delivery list: {str(e)}', 'error')
+        return redirect(url_for('sales'))
+
 # Excel Export for Production
 @app.route('/excel_export_to_production')
 @login_required

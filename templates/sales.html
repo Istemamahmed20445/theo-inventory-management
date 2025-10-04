@@ -493,6 +493,9 @@ window.isClassicView = true; // For single items, will be set to false for multi
                         <a href="#" class="btn btn-outline-primary" onclick="exportToProduction()">
                             <i class="fas fa-industry me-1"></i>Export to Production
                         </a>
+                        <a href="#" class="btn btn-outline-warning" onclick="exportDelivery()" title="Export only green highlighted (delivered) items">
+                            <i class="fas fa-truck me-1"></i>Go for Delivery
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1813,6 +1816,15 @@ function exportSales() {
 function exportToProduction() {
     const dateFilter = document.getElementById('salesDateFilter').value;
     let url = "{{ url_for('excel_export_to_production') }}";
+    if (dateFilter) {
+        url += "?date=" + dateFilter;
+    }
+    window.location.href = url;
+}
+
+function exportDelivery() {
+    const dateFilter = document.getElementById('salesDateFilter').value;
+    let url = "{{ url_for('excel_export_delivery') }}";
     if (dateFilter) {
         url += "?date=" + dateFilter;
     }
