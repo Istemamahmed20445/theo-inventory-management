@@ -26,7 +26,7 @@
 ### **Step 3: Deploy (That's It!)**
 1. **Name:** `theo-inventory-management`
 2. **Build Command:** `pip install -r requirements.txt` (auto-filled)
-3. **Start Command:** `gunicorn --bind 0.0.0.0:$PORT wsgi:app` (auto-filled)
+3. **Start Command:** `gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 30 wsgi:app`
 4. **Click** "Create Web Service"
 
 ---
