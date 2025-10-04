@@ -204,3 +204,10 @@ static/uploads/*
 # Temporary files
 *.tmp
 *.temp
+
+# Large files that exceed GitHub limits
+*.dmg
+*.iso
+*.zip
+*.tar.gz
+*.rar
