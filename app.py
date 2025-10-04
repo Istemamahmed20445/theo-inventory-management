@@ -2577,8 +2577,10 @@ def excel_export_delivery():
                     if item.get('is_from_multiple_items'):
                         # This is from a multiple items order - calculate product price
                         product_price = item.get('product_price', 0) * item.get('quantity', 1)
-                        item_delivery_charge = 0  # Individual items don't have delivery charge
-                        item_total_price = product_price
+                        # Show parent delivery charge for delivery team reference
+                        item_delivery_charge = parent_delivery_charge
+                        # For multiple items, show product price + delivery charge for total
+                        item_total_price = product_price + parent_delivery_charge
                     else:
                         # This is a single item order - get price directly
                         product_price = item.get('product_total', 0)
