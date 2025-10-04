@@ -2502,7 +2502,7 @@ def excel_export_delivery():
         sheet.title = "Go for Delivery"
         
         # Headers for delivery export
-        headers = ['Customer Name', 'Phone', 'Address', 'Product Name', 'Size', 'Color', 'Quantity', 'Price', 'Delivery Date', 'Sold By']
+        headers = ['Customer Name', 'Phone', 'Address', 'Delivery Location', 'Product Name', 'Size', 'Color', 'Quantity', 'Product Price', 'Delivery Charge', 'Total Price', 'Delivery Date', 'Sold By']
         for col, header in enumerate(headers, 1):
             sheet.cell(row=1, column=col, value=header)
         
@@ -2542,24 +2542,44 @@ def excel_export_delivery():
                     sheet.cell(row=row, column=2, value=customer_group['customer_phone'])
                     sheet.cell(row=row, column=3, value=customer_group['customer_address'])
                     
+                    # Determine delivery location based on delivery charge
+                    delivery_charge = item.get('delivery_charge', 0)
+                    if delivery_charge == 80:
+                        delivery_location = "Inside Dhaka"
+                    elif delivery_charge == 130:
+                        delivery_location = "Outside Dhaka"
+                    elif delivery_charge == 0:
+                        delivery_location = "No Delivery"
+                    else:
+                        delivery_location = f"Custom ({delivery_charge}৳)"
+                    sheet.cell(row=row, column=4, value=delivery_location)
+                    
                     # Product information
-                    sheet.cell(row=row, column=4, value=item.get('product_name', ''))
-                    sheet.cell(row=row, column=5, value=item.get('product_size', ''))
-                    sheet.cell(row=row, column=6, value=item.get('product_color', ''))
-                    sheet.cell(row=row, column=7, value=item.get('quantity', item.get('item_numbers', 1)))
-                    sheet.cell(row=row, column=8, value=item.get('total_price', 0))
+                    sheet.cell(row=row, column=5, value=item.get('product_name', ''))
+                    sheet.cell(row=row, column=6, value=item.get('product_size', ''))
+                    sheet.cell(row=row, column=7, value=item.get('product_color', ''))
+                    sheet.cell(row=row, column=8, value=item.get('quantity', item.get('item_numbers', 1)))
+                    
+                    # Price information - separate product price, delivery charge, and total
+                    product_price = item.get('product_total', 0)
+                    if product_price == 0:  # Fallback for older data
+                        product_price = item.get('total_price', 0) - delivery_charge
+                    
+                    sheet.cell(row=row, column=9, value=product_price)
+                    sheet.cell(row=row, column=10, value=delivery_charge)
+                    sheet.cell(row=row, column=11, value=item.get('total_price', 0))
                     
                     # Delivery information
                     delivery_date = customer_group['delivered_at']
                     if delivery_date:
                         if isinstance(delivery_date, datetime):
-                            sheet.cell(row=row, column=9, value=delivery_date.strftime('%Y-%m-%d %H:%M'))
+                            sheet.cell(row=row, column=12, value=delivery_date.strftime('%Y-%m-%d %H:%M'))
                         else:
-                            sheet.cell(row=row, column=9, value=str(delivery_date))
+                            sheet.cell(row=row, column=12, value=str(delivery_date))
                     else:
-                        sheet.cell(row=row, column=9, value='')
+                        sheet.cell(row=row, column=12, value='')
                     
-                    sheet.cell(row=row, column=10, value=customer_group['sold_by'])
+                    sheet.cell(row=row, column=13, value=customer_group['sold_by'])
                     row += 1
         
         # Auto-adjust column widths
