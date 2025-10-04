@@ -2,7 +2,7 @@
 # This file contains ngrok settings for optimal performance
 
 version: "2"
-authtoken: # Add your ngrok authtoken here
+authtoken: 33Q61MSrr3nEwb9R98vzuVlfkZQ_4DGw74jisoyAvo5RmJMsE
 # Get your authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
 
 tunnels:
