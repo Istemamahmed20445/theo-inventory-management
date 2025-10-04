@@ -36,17 +36,21 @@ if __name__ == '__main__':
     
     local_ip = get_local_ip()
     
+    # Get port from environment variable (for Render) or use default
+    port = int(os.environ.get('PORT', 5003))
+    debug_mode = os.environ.get('FLASK_ENV', 'development') != 'production'
+    
     # Run the application
     print("Starting THEO CLOTHING INVENTORY System...")
     print("=" * 50)
     print("Access URLs:")
-    print(f"  Local:     http://localhost:5003")
-    print(f"  Network:   http://{local_ip}:5003")
+    print(f"  Local:     http://localhost:{port}")
+    print(f"  Network:   http://{local_ip}:{port}")
     print("=" * 50)
     print("Press Ctrl+C to stop the server")
     
     try:
-        app.run(debug=True, host='0.0.0.0', port=5003)
+        app.run(debug=debug_mode, host='0.0.0.0', port=port)
     except KeyboardInterrupt:
         print("\nServer stopped by user")
     except Exception as e:

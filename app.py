@@ -3032,4 +3032,5 @@ def service_worker():
     return '', 204  # No Content response
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5003)
+    port = int(os.environ.get('PORT', 5003))
+    app.run(debug=False, host='0.0.0.0', port=port)
