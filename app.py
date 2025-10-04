@@ -145,11 +145,36 @@ def parse_item_numbers(item_numbers):
     return total_items
 
 # Firebase configuration
-# Use local service account file for development
-cred = credentials.Certificate("firebase-service-account.json")
-firebase_admin.initialize_app(cred, {
-    'storageBucket': 'inventory-3098f-p2f4t'
-})
+# Prefer service account JSON from environment on Render; fallback to local file or ADC
+service_account_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
+
+firebase_credentials = None
+if service_account_json:
+    try:
+        service_account_info = json.loads(service_account_json)
+        firebase_credentials = credentials.Certificate(service_account_info)
+    except Exception:
+        firebase_credentials = None
+
+if firebase_credentials is None:
+    service_account_file = os.environ.get('FIREBASE_CREDENTIALS_FILE', 'firebase-service-account.json')
+    if os.path.exists(service_account_file):
+        firebase_credentials = credentials.Certificate(service_account_file)
+    else:
+        # Fall back to application default credentials if available
+        try:
+            firebase_credentials = credentials.ApplicationDefault()
+        except Exception:
+            firebase_credentials = None
+
+firebase_options = {}
+env_storage_bucket = os.environ.get('FIREBASE_STORAGE_BUCKET')
+config_storage_bucket = app.config.get('FIREBASE_STORAGE_BUCKET')
+resolved_storage_bucket = env_storage_bucket or config_storage_bucket
+if resolved_storage_bucket:
+    firebase_options['storageBucket'] = resolved_storage_bucket
+
+firebase_admin.initialize_app(firebase_credentials, firebase_options or None)
 
 db = firestore.client()
 bucket = storage.bucket()
