@@ -1,0 +1,2674 @@
+{% extends "base.html" %}
+
+{% block title %}Sales - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<!-- Data for sales-variants.js -->
+<script type="application/json" id="products-data">{{ products|tojson }}</script>
+<script type="application/json" id="sizes-data">{{ sizes|tojson }}</script>
+<script type="application/json" id="colors-data">{{ colors|tojson }}</script>
+<script>
+// Make data available globally for the sales-variants.js
+window.productsData = JSON.parse(document.getElementById('products-data').textContent);
+window.sizesData = JSON.parse(document.getElementById('sizes-data').textContent);
+window.colorsData = JSON.parse(document.getElementById('colors-data').textContent);
+window.isClassicView = true; // For single items, will be set to false for multiple items
+</script>
+<script src="{{ url_for('static', filename='js/sales-variants.js') }}"></script>
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-shopping-cart me-2"></i>Sales Management
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create New Sale</h5>
+                <div class="btn-group btn-group-sm mt-2" role="group">
+                    <button type="button" class="btn btn-outline-primary active" id="singleSaleBtn" onclick="toggleSaleType('single')">
+                        <i class="fas fa-shopping-cart me-1"></i>Single Item
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" id="multipleSaleBtn" onclick="toggleSaleType('multiple')">
+                        <i class="fas fa-shopping-basket me-1"></i>Multiple Items
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Single Item Sale Form -->
+                <form method="POST" action="{{ url_for('create_sale') }}" id="singleSaleForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer_name" class="form-label">Customer Name *</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="customer_name" name="customer_name" required 
+                                           onblur="checkCustomerHistory()" 
+                                           autocomplete="off" placeholder="Start typing customer name...">
+                                    <!-- Customer History Box -->
+                                    <div id="customerHistoryBox" class="mt-2" style="display: none;">
+                                        <div class="card border-info">
+                                            <div class="card-body py-2">
+                                                <div id="customerHistoryContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer_phone" class="form-label">Phone Number *</label>
+                                <div class="position-relative">
+                                    <input type="tel" class="form-control" id="customer_phone" name="customer_phone" required 
+                                           onblur="checkCustomerHistory()" 
+                                           autocomplete="off" placeholder="Start typing phone number...">
+                                    <!-- Customer History Box for Phone -->
+                                    <div id="customerPhoneHistoryBox" class="mt-2" style="display: none;">
+                                        <div class="card border-info">
+                                            <div class="card-body py-2">
+                                                <div id="customerPhoneHistoryContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="mb-3">
+                        <label for="customer_address" class="form-label">Customer Address *</label>
+                        <textarea class="form-control" id="customer_address" name="customer_address" rows="2" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="product_id" class="form-label">Select Product *</label>
+                                <div class="mb-2">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="singleProductSearch" placeholder="Search by name, category, size, color, barcode..." onkeyup="debounceSingleSearch()">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="clearSingleSearch()" title="Clear search">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div id="singleSearchLoading" class="text-center mt-1" style="display: none;">
+                                        <small class="text-muted">Searching...</small>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <select class="form-select" id="product_id" name="product_id" required onchange="updateProductInfo()">
+                                        <option value="">Choose a product...</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.id }}" 
+                                                data-name="{{ product.name }}"
+                                                data-category="{{ product.category }}"
+                                                data-size="{{ product.size }}"
+                                                data-color="{{ product.color }}"
+                                                data-price="{{ product.price }}"
+                                                data-barcode="{{ product.barcode }}"
+                                                data-body-size="{{ product.body_size or '' }}"
+                                                data-waist-size="{{ product.waist_size or '' }}"
+                                                data-length="{{ product.length or '' }}">
+                                            {{ product.name }} - {{ product.category }} ({{ product.size }}{% if product.body_size or product.waist_size or product.length %}, {{ [product.body_size, product.waist_size, product.length]|select('string')|join(',') }}{% endif %}, {{ product.color }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-success" onclick="openBarcodeScanner(handleSalesBarcodeScan)">
+                                        <i class="fas fa-qrcode"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="item_numbers" class="form-label">Item Numbers *</label>
+                                <input type="text" class="form-control" id="item_numbers" name="item_numbers" 
+                                       placeholder="e.g., 40 or 1,2,3 or 1-5" 
+                                       onchange="calculateSingleTotal()" required>
+                                <small class="text-muted">Enter item numbers (e.g., 1,2,3 or 1-5 for range)</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sale_size" class="form-label">Size Override</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="sale_size" name="sale_size">
+                                        <option value="">Use product size</option>
+                                        {% for size in sizes %}
+                                        <option value="{{ size.name }}">{{ size.name }}{% if size.description %} - {{ size.description }}{% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-success" onclick="addSizeFromSales()" title="Add Size">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="editSizeFromSales()" title="Edit Size">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="deleteSizeFromSales()" title="Delete Size">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Override the product's default size if needed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sale_color" class="form-label">Color Override</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="sale_color" name="sale_color">
+                                        <option value="">Use product color</option>
+                                        {% for color in colors %}
+                                        <option value="{{ color.name }}">{{ color.name }}{% if color.description %} - {{ color.description }}{% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-success" onclick="addColorFromSales()" title="Add Color">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="editColorFromSales()" title="Edit Color">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="deleteColorFromSales()" title="Delete Color">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Override the product's default color if needed</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Unit Price</label>
+                                <div class="form-control-plaintext" id="unit_price">৳0.00</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Product Total</label>
+                                <div class="form-control-plaintext" id="product_total">৳0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="delivery_charge" class="form-label">Delivery Charge</label>
+                                <select class="form-select" id="delivery_charge" name="delivery_charge" onchange="calculateSingleTotal()">
+                                    <option value="0">No Delivery</option>
+                                    <option value="80">Inside Dhaka - ৳80</option>
+                                    <option value="130">Outside Dhaka - ৳130</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Total Price</label>
+                                <div class="form-control-plaintext fw-bold text-success" id="total_price">৳0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Sale notes, special instructions, etc."></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-cash-register me-1"></i>Complete Sale
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="toggleEmergencyDelivery()" id="emergencyBtn">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Emergency Delivery
+                        </button>
+                    </div>
+                    <input type="hidden" id="emergency_delivery" name="emergency_delivery" value="false">
+                </form>
+                
+                <!-- Multiple Item Sale Form -->
+                <form method="POST" action="{{ url_for('create_multiple_sale') }}" id="multipleSaleForm" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="multi_customer_name" class="form-label">Customer Name *</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="multi_customer_name" name="customer_name" required 
+                                           onblur="checkCustomerHistory()" 
+                                           autocomplete="off" placeholder="Start typing customer name...">
+                                    <!-- Customer History Box for Multiple Items -->
+                                    <div id="multiCustomerHistoryBox" class="mt-2" style="display: none;">
+                                        <div class="card border-info">
+                                            <div class="card-body py-2">
+                                                <div id="multiCustomerHistoryContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="multi_customer_phone" class="form-label">Phone Number *</label>
+                                <div class="position-relative">
+                                    <input type="tel" class="form-control" id="multi_customer_phone" name="customer_phone" required 
+                                           onblur="checkCustomerHistory()" 
+                                           autocomplete="off" placeholder="Start typing phone number...">
+                                    <!-- Customer History Box for Multiple Items Phone -->
+                                    <div id="multiCustomerPhoneHistoryBox" class="mt-2" style="display: none;">
+                                        <div class="card border-info">
+                                            <div class="card-body py-2">
+                                                <div id="multiCustomerPhoneHistoryContent"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="mb-3">
+                        <label for="multi_customer_address" class="form-label">Customer Address *</label>
+                        <textarea class="form-control" id="multi_customer_address" name="customer_address" rows="2" required></textarea>
+                    </div>
+                    
+                        <!-- Enhanced Product Selection with Variants Support -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Select Products & Variants *</label>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="addProductVariant()">
+                                        <i class="fas fa-plus me-1"></i>Add Product Variant
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleProductInterface()" id="toggleInterfaceBtn">
+                                        <i class="fas fa-exchange-alt me-1"></i>Switch to Classic View
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            
+                            <!-- Dynamic Product Variants Container (Shown by default for multiple items) -->
+                            <div id="productVariantsContainer">
+                            <!-- Enhanced View Search -->
+                            <div class="mb-3">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="enhancedProductSearch" 
+                                           placeholder="Search products by name, category, size, color..." 
+                                           onkeyup="debounceEnhancedSearch()">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearEnhancedSearch()" title="Clear search">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="enhancedSearchLoading" class="text-center mt-1" style="display: none; transition: opacity 0.2s;">
+                                    <small class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Searching...</small>
+                                </div>
+                                <div id="enhancedSearchResults" class="mt-1" style="display: none; transition: all 0.3s ease;">
+                                    <small class="text-muted" id="enhancedSearchCount"></small>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Enhanced View:</strong> Add the same product multiple times with different colors and sizes! 
+                                Use the search above to quickly find products.
+                            </div>
+                        </div>
+                        
+                        <!-- Original Products Table (Hidden by default for multiple items) -->
+                        <div class="table-responsive" id="originalProductsTable" style="display: none;">
+                            <!-- Search and Controls for Classic Table -->
+                            <div class="mb-2">
+                                <div class="d-flex gap-2 mb-2">
+                                    <div class="input-group input-group-sm flex-grow-1">
+                                        <input type="text" class="form-control" id="productSearch" placeholder="Search products in table..." onkeyup="debounceSearch()">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="clearTableSearch()" title="Clear search">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <button class="btn btn-outline-info btn-sm" type="button" onclick="toggleProductTableVisibility()" id="toggleTableBtn" title="Minimize product table">
+                                        <i class="fas fa-eye-slash me-1"></i>Minimize Table
+                                    </button>
+                                </div>
+                                <div id="searchLoading" class="text-center mt-2" style="display: none;">
+                                    <small class="text-muted">Searching...</small>
+                                </div>
+                            </div>
+                            <!-- Minimized state indicator -->
+                            <div id="minimizedIndicator" class="alert alert-info text-center" style="display: none;">
+                                <i class="fas fa-eye-slash me-2"></i>
+                                <strong>Product table is minimized.</strong> 
+                                <span class="text-muted">Use the search box above to find specific products, or click "Show Table" to expand all products.</span>
+                            </div>
+                            
+                            <table class="table table-sm" id="productsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Price</th>
+                                        <th>Size Override</th>
+                                        <th>Color Override</th>
+                                        <th>Item Numbers</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in products %}
+                                    <tr>
+                                        <td>
+                                            <small>{{ product.name }} - {{ product.category }} ({{ product.size }}{% if product.body_size or product.waist_size or product.length %}, {{ [product.body_size, product.waist_size, product.length]|select('string')|join(',') }}{% endif %}, {{ product.color }})</small>
+                                        </td>
+                                        <td>৳{{ "%.2f"|format(product.price) }}</td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <select class="form-select" name="product_{{ product.id }}_size">
+                                                    <option value="">Use product size</option>
+                                                    {% for size in sizes %}
+                                                    <option value="{{ size.name }}">{{ size.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="addSizeFromSales()" title="Add Size">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="editSizeFromSales()" title="Edit Size">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSizeFromSales()" title="Delete Size">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <select class="form-select" name="product_{{ product.id }}_color">
+                                                    <option value="">Use product color</option>
+                                                    {% for color in colors %}
+                                                    <option value="{{ color.name }}">{{ color.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="addColorFromSales()" title="Add Color">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="editColorFromSales()" title="Edit Color">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteColorFromSales()" title="Delete Color">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm item-numbers-input" 
+                                                   name="product_{{ product.id }}_items" 
+                                                   placeholder="e.g., 40 or 1,2,3 or 1-5"
+                                                   data-price="{{ product.price }}"
+                                                   data-product-id="{{ product.id }}"
+                                                   onchange="updateItemTotal(this)">
+                                        </td>
+                                        <td>
+                                            <span class="item-total" id="total_{{ product.id }}">৳0.00</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Total Items</label>
+                                <div class="form-control-plaintext" id="total_items">0</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Product Total</label>
+                                <div class="form-control-plaintext" id="product_grand_total">৳0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="multi_delivery_charge" class="form-label">Delivery Charge</label>
+                                <select class="form-select" id="multi_delivery_charge" name="delivery_charge" onchange="calculateGrandTotal()">
+                                    <option value="0">No Delivery</option>
+                                    <option value="80">Inside Dhaka - ৳80</option>
+                                    <option value="130">Outside Dhaka - ৳130</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Grand Total</label>
+                                <div class="form-control-plaintext fw-bold text-success" id="grand_total">৳0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="multi_notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="multi_notes" name="notes" rows="2" placeholder="Sale notes, special instructions, etc."></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success" onclick="return validateMultipleSale()">
+                            <i class="fas fa-shopping-basket me-1"></i>Complete Multiple Sale
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="toggleEmergencyDeliveryMultiple()" id="emergencyBtnMultiple">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Emergency Delivery
+                        </button>
+                    </div>
+                    <input type="hidden" id="multi_emergency_delivery" name="emergency_delivery" value="false">
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Sales Statistics</h5>
+                <div class="mt-2">
+                    <div class="input-group input-group-sm">
+                        <input type="date" class="form-control" id="salesDateFilter" placeholder="Select date">
+                        <a href="#" class="btn btn-outline-success" onclick="exportSales()">
+                            <i class="fas fa-file-excel me-1"></i>Export for Delivery
+                        </a>
+                        <a href="#" class="btn btn-outline-primary" onclick="exportToProduction()">
+                            <i class="fas fa-industry me-1"></i>Export to Production
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ sales_orders|length }}</h4>
+                        <small class="text-muted">Total Sales</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">৳{{ "%.2f"|format(sales_orders|sum(attribute='total_price') or 0) }}</h4>
+                        <small class="text-muted">Total Revenue</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info">{{ sales_orders|map(attribute='quantity', default=0)|sum or 0 }}</h4>
+                        <small class="text-muted">Items Sold</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ sales_orders|selectattr('created_at')|list|length }}</h4>
+                        <small class="text-muted">Today's Sales</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Sales</h5>
+                <div class="mt-2">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="customerSearch" placeholder="Search by customer name or phone..." onkeyup="filterCustomers()">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if sales_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="recentSalesTable">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Size/Color</th>
+                                <th>Items</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Sold By</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer_group in grouped_sales %}
+                                {% set items_list = customer_group['items'] %}
+                                {% set first_item = items_list[0] %}
+                                
+                                {% if first_item.get('is_multiple_items') %}
+                                    <!-- Consolidated Multiple Items Order -->
+                                    <tr {% if first_item.get('emergency_delivery') %}class="table-danger"{% elif first_item.get('delivered') %}class="table-success"{% endif %}>
+                                        <td>
+                                            <strong>{{ customer_group['customer_name'] }}</strong>
+                                            {% if first_item.get('emergency_delivery') %}
+                                            <span class="badge bg-danger ms-1">EMERGENCY</span>
+                                            {% endif %}
+                                            {% if first_item.get('delivered') %}
+                                            <span class="badge bg-success ms-1">DELIVERED</span>
+                                            {% endif %}
+                                            <span class="badge bg-info ms-1">{{ first_item.get('total_items', 0) }} ITEMS</span>
+                                            <br>
+                                            <small class="text-muted">{{ customer_group['customer_phone'] }}</small>
+                                            {% if first_item.get('notes') %}
+                                            <br><small class="text-info fst-italic" style="font-size: 0.7rem; line-height: 1.2; max-width: 200px; word-wrap: break-word;">
+                                                <i class="fas fa-sticky-note me-1"></i>{{ first_item['notes'] }}
+                                            </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>Multiple Items Order</strong><br>
+                                            <small class="text-muted">
+                                                {% for order_item in first_item.get('items', [])[:3] %}
+                                                    {{ order_item['product_name'] }}{% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                                {% if first_item.get('items', [])|length > 3 %}
+                                                    <br>+{{ first_item.get('items', [])|length - 3 }} more items
+                                                {% endif %}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">Various</small>
+                                        </td>
+                                        <td>{{ first_item.get('total_quantity', 0) }} total</td>
+                                        <td>-</td>
+                                        <td><strong>৳{{ "%.2f"|format(first_item['total_price']) }}</strong></td>
+                                        <td>
+                                            {% if first_item.get('status') == 'returned' %}
+                                                <span class="badge bg-danger">Returned</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ customer_group['sold_by'] }}</td>
+                                        <td>{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="printReceipt('{{ first_item.id }}')" title="Print Receipt">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                                {% if first_item.get('status') != 'returned' %}
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAsReturnedSimple('{{ first_item.id }}', this)">
+                                                        <i class="fas fa-undo me-1"></i>Mark as Return
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleEmergencyDeliveryForSale('{{ first_item.id }}', this)" title="Emergency Delivery">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm {% if first_item.get('delivered') %}btn-success{% else %}btn-outline-success{% endif %}" onclick="toggleDeliveredForSale('{{ first_item.id }}', this)" title="{% if first_item.get('delivered') %}Delivered - Click to mark as not delivered{% else %}Mark as Delivered{% endif %}">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <small class="text-muted">Returned on {{ first_item.get('returned_at', '').strftime('%Y-%m-%d') if first_item.get('returned_at') else 'N/A' }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% elif items_list|length > 1 %}
+                                    <!-- Legacy Multiple Items (Grouped Individual Records) -->
+                                    <tr>
+                                        <td>
+                                            <strong>{{ customer_group['customer_name'] }}</strong>
+                                            <span class="badge bg-warning ms-1">{{ items_list|length }} ITEMS</span>
+                                            <br>
+                                            <small class="text-muted">{{ customer_group['customer_phone'] }}</small>
+                                        </td>
+                                        <td>
+                                            <strong>Multiple Items (Legacy)</strong><br>
+                                            <small class="text-muted">
+                                                {% for item in items_list[:3] %}
+                                                    {{ item['product_name'] }}{% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                                {% if items_list|length > 3 %}
+                                                    <br>+{{ items_list|length - 3 }} more items
+                                                {% endif %}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">Various</small>
+                                        </td>
+                                        <td>{{ items_list|sum(attribute='quantity') }} total</td>
+                                        <td>-</td>
+                                        <td><strong>৳{{ "%.2f"|format(items_list|sum(attribute='total_price')) }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-success">Completed</span>
+                                        </td>
+                                        <td>{{ customer_group['sold_by'] }}</td>
+                                        <td>{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" data-items="{{ items_list|tojson|e }}" onclick="printLegacyGroupReceiptFromData(this)" title="Print Receipt">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <!-- Single Item Order -->
+                                    {% set item = first_item %}
+                                    <tr {% if item.get('emergency_delivery') %}class="table-danger"{% elif item.get('delivered') %}class="table-success"{% endif %}>
+                                        <td>
+                                            <strong>{{ customer_group['customer_name'] }}</strong>
+                                            {% if item.get('emergency_delivery') %}
+                                            <span class="badge bg-danger ms-1">EMERGENCY</span>
+                                            {% endif %}
+                                            {% if item.get('delivered') %}
+                                            <span class="badge bg-success ms-1">DELIVERED</span>
+                                            {% endif %}
+                                            <br>
+                                            <small class="text-muted">{{ customer_group['customer_phone'] }}</small>
+                                            {% if item.get('notes') %}
+                                            <br><small class="text-info fst-italic" style="font-size: 0.7rem; line-height: 1.2; max-width: 200px; word-wrap: break-word;">
+                                                <i class="fas fa-sticky-note me-1"></i>{{ item['notes'] }}
+                                            </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item['product_name'] }}</td>
+                                        <td>{{ item['product_size'] }}{% if item['product_body_size'] or item['product_waist_size'] or item['product_length'] %} ({{ [item['product_body_size'], item['product_waist_size'], item['product_length']]|select('string')|join(',') }}){% endif %} / {{ item['product_color'] }}</td>
+                                        <td>{{ item.get('item_numbers', item.get('quantity', 0)) }}</td>
+                                        <td>৳{{ "%.2f"|format(item['product_price']) }}</td>
+                                        <td><strong>৳{{ "%.2f"|format(item['total_price']) }}</strong></td>
+                                        <td>
+                                            {% if item.get('status') == 'returned' %}
+                                                <span class="badge bg-danger">Returned</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ customer_group['sold_by'] }}</td>
+                                        <td>{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="printReceipt('{{ item.id }}')" title="Print Receipt">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                                {% if item.get('status') != 'returned' %}
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAsReturnedSimple('{{ item.id }}', this)">
+                                                        <i class="fas fa-undo me-1"></i>Mark as Return
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleEmergencyDeliveryForSale('{{ item.id }}', this)" title="Emergency Delivery">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm {% if item.get('delivered') %}btn-success{% else %}btn-outline-success{% endif %}" onclick="toggleDeliveredForSale('{{ item.id }}', this)" title="{% if item.get('delivered') %}Delivered - Click to mark as not delivered{% else %}Mark as Delivered{% endif %}">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <small class="text-muted">Returned on {{ item.get('returned_at', '').strftime('%Y-%m-%d') if item.get('returned_at') else 'N/A' }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No sales found</h5>
+                    <p class="text-muted">Create your first sale to get started</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Returned Customers Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-undo me-2 text-danger"></i>Returned Customers
+                </h5>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-danger" onclick="loadReturnedCustomers()">
+                        <i class="fas fa-refresh me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="returnedCustomersContent">
+                    <div class="text-center py-4">
+                        <i class="fas fa-undo fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Click "Refresh" to load returned customers</h5>
+                        <p class="text-muted">This section shows customers who have returned items</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedProduct = null;
+
+function toggleSaleType(type) {
+    const singleForm = document.getElementById('singleSaleForm');
+    const multipleForm = document.getElementById('multipleSaleForm');
+    const singleBtn = document.getElementById('singleSaleBtn');
+    const multipleBtn = document.getElementById('multipleSaleBtn');
+    
+    if (type === 'single') {
+        singleForm.style.display = 'block';
+        multipleForm.style.display = 'none';
+        singleBtn.classList.add('active');
+        multipleBtn.classList.remove('active');
+        
+        // Set to classic view for single items (not applicable but for consistency)
+        window.isClassicView = true;
+        
+        // Clear multiple items search
+        const productSearchInput = document.getElementById('productSearch');
+        if (productSearchInput) {
+            productSearchInput.value = '';
+            filterProducts();
+        }
+    } else {
+        singleForm.style.display = 'none';
+        multipleForm.style.display = 'block';
+        singleBtn.classList.remove('active');
+        multipleBtn.classList.add('active');
+        
+        // Set to Enhanced view for multiple items by default
+        window.isClassicView = false;
+        
+        // Show Enhanced view and hide Classic view
+        const productVariantsContainer = document.getElementById('productVariantsContainer');
+        const originalProductsTable = document.getElementById('originalProductsTable');
+        
+        if (productVariantsContainer) {
+            productVariantsContainer.style.display = 'block';
+        }
+        if (originalProductsTable) {
+            originalProductsTable.style.display = 'none';
+        }
+        
+        // Clear single item search and reset dropdown
+        document.getElementById('singleProductSearch').value = '';
+        document.getElementById('product_id').selectedIndex = 0;
+        filterSingleProducts();
+        updateProductInfo();
+        
+        // Add initial variant if none exist
+        const existingVariants = document.querySelectorAll('.product-variant');
+        if (existingVariants.length === 0) {
+            addProductVariant();
+        }
+        
+        // Initialize multiple form totals
+        calculateGrandTotal();
+    }
+}
+
+function updateProductInfo() {
+    const select = document.getElementById('product_id');
+    const option = select.options[select.selectedIndex];
+    
+    if (option.value) {
+        selectedProduct = {
+            name: option.dataset.name,
+            category: option.dataset.category,
+            size: option.dataset.size,
+            color: option.dataset.color,
+            price: parseFloat(option.dataset.price)
+        };
+        
+        document.getElementById('unit_price').textContent = '৳' + selectedProduct.price.toFixed(2);
+        calculateTotal();
+    } else {
+        selectedProduct = null;
+        document.getElementById('unit_price').textContent = '৳0.00';
+        document.getElementById('total_price').textContent = '৳0.00';
+    }
+}
+
+function calculateSingleTotal() {
+    if (selectedProduct) {
+        const itemNumbers = document.getElementById('item_numbers').value.trim();
+        const itemCount = parseItemNumbers(itemNumbers);
+        const productTotal = selectedProduct.price * itemCount;
+        const deliveryCharge = parseFloat(document.getElementById('delivery_charge').value) || 0;
+        const total = productTotal + deliveryCharge;
+        
+        document.getElementById('product_total').textContent = '৳' + productTotal.toFixed(2);
+        document.getElementById('total_price').textContent = '৳' + total.toFixed(2);
+    }
+}
+
+function calculateTotal() {
+    // Keep this function for backward compatibility, but redirect to calculateSingleTotal
+    calculateSingleTotal();
+}
+
+function handleSalesBarcodeScan(barcode) {
+    // Look up product by barcode
+    fetch(`/lookup_product_by_barcode/${barcode}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Find and select the product in the dropdown
+                const select = document.getElementById('product_id');
+                const product = data.product;
+                
+                // Find the option with matching barcode
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].dataset.barcode === barcode) {
+                        select.selectedIndex = i;
+                        updateProductInfo();
+                        showAlert(`Product found: ${product.name}`, 'success');
+                        break;
+                    }
+                }
+            } else {
+                showAlert('Product not found', 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Error looking up product', 'danger');
+        });
+}
+
+function showAlert(message, type) {
+    const alertHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Add alert to top of page
+    const container = document.querySelector('.container-fluid');
+    container.insertAdjacentHTML('afterbegin', alertHTML);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const alert = container.querySelector('.alert');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function updateItemTotal(input) {
+    const itemNumbers = input.value.trim();
+    const price = parseFloat(input.dataset.price);
+    const productId = input.dataset.productId;
+    
+    // Parse item numbers (e.g., "1,2,3" or "1-5" or "1,3-5,7")
+    const itemCount = parseItemNumbers(itemNumbers);
+    const itemTotal = itemCount * price;
+    
+    // Update individual item total
+    const totalElement = document.getElementById('total_' + productId);
+    if (totalElement) {
+        totalElement.textContent = '৳' + itemTotal.toFixed(2);
+    }
+    
+    // Recalculate grand total
+    calculateGrandTotal();
+}
+
+function parseItemNumbers(itemNumbers) {
+    if (!itemNumbers) return 0;
+    
+    let totalItems = 0;
+    const parts = itemNumbers.split(',');
+    
+    for (let part of parts) {
+        part = part.trim();
+        if (part.includes('-')) {
+            // Handle ranges like "1-5"
+            const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+            if (!isNaN(start) && !isNaN(end) && start <= end) {
+                totalItems += (end - start + 1);
+            }
+        } else {
+            // Handle single numbers - treat as quantity if it's a simple number
+            const num = parseInt(part);
+            if (!isNaN(num)) {
+                // If it's just a number without other characters, treat as quantity
+                if (part === num.toString()) {
+                    totalItems += num;
+                } else {
+                    // If it contains other characters, treat as single item
+                    totalItems += 1;
+                }
+            }
+        }
+    }
+    
+    return totalItems;
+}
+
+function calculateGrandTotal() {
+    let totalItems = 0;
+    let productGrandTotal = 0;
+    
+    const itemInputs = document.querySelectorAll('.item-numbers-input');
+    
+    itemInputs.forEach(input => {
+        const itemNumbers = input.value.trim();
+        const itemCount = parseItemNumbers(itemNumbers);
+        const price = parseFloat(input.dataset.price);
+        const itemTotal = itemCount * price;
+        
+        totalItems += itemCount;
+        productGrandTotal += itemTotal;
+    });
+    
+    const deliveryCharge = parseFloat(document.getElementById('multi_delivery_charge').value) || 0;
+    const grandTotal = productGrandTotal + deliveryCharge;
+    
+    document.getElementById('total_items').textContent = totalItems;
+    document.getElementById('product_grand_total').textContent = '৳' + productGrandTotal.toFixed(2);
+    document.getElementById('grand_total').textContent = '৳' + grandTotal.toFixed(2);
+}
+
+// Debounce search for better performance
+let searchTimeout;
+let singleSearchTimeout;
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    document.getElementById('searchLoading').style.display = 'block';
+    
+    searchTimeout = setTimeout(() => {
+        filterProducts();
+        document.getElementById('searchLoading').style.display = 'none';
+    }, 300); // 300ms delay
+}
+
+function debounceSingleSearch() {
+    clearTimeout(singleSearchTimeout);
+    document.getElementById('singleSearchLoading').style.display = 'block';
+    
+    singleSearchTimeout = setTimeout(() => {
+        filterSingleProducts();
+        document.getElementById('singleSearchLoading').style.display = 'none';
+    }, 300); // 300ms delay
+}
+
+function clearSingleSearch() {
+    document.getElementById('singleProductSearch').value = '';
+    filterSingleProducts();
+    document.getElementById('singleProductSearch').focus();
+}
+
+function clearTableSearch() {
+    const searchInput = document.getElementById('productSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        
+        // If table is minimized, clearing search should hide all rows again
+        if (isTableMinimized) {
+            const table = document.getElementById('productsTable');
+            const rows = table.getElementsByTagName('tr');
+            for (let i = 1; i < rows.length; i++) { // Skip header row
+                rows[i].style.display = 'none';
+            }
+        } else {
+            // If table is not minimized, show all rows
+            filterProducts();
+        }
+        
+        searchInput.focus();
+    }
+}
+
+// Enhanced view search functions
+let enhancedSearchTimeout;
+
+function debounceEnhancedSearch() {
+    clearTimeout(enhancedSearchTimeout);
+    const loadingDiv = document.getElementById('enhancedSearchLoading');
+    const resultsDiv = document.getElementById('enhancedSearchResults');
+    
+    if (loadingDiv) loadingDiv.style.display = 'block';
+    if (resultsDiv) resultsDiv.style.display = 'none';
+    
+    enhancedSearchTimeout = setTimeout(() => {
+        filterEnhancedProducts();
+        if (loadingDiv) loadingDiv.style.display = 'none';
+    }, 200); // Faster response for better UX
+}
+
+function filterEnhancedProducts() {
+    const searchInput = document.getElementById('enhancedProductSearch');
+    if (!searchInput) return;
+    
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const variants = document.querySelectorAll('.product-variant');
+    let totalVisible = 0;
+    let totalVariants = 0;
+    
+    // Split search term into words for better matching
+    const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
+    
+    variants.forEach(variant => {
+        const productSelect = variant.querySelector('select[name*="_product"]');
+        if (productSelect) {
+            const options = productSelect.getElementsByTagName('option');
+            let visibleInThisVariant = 0;
+            
+            // Use requestAnimationFrame for smooth performance
+            requestAnimationFrame(() => {
+                for (let i = 1; i < options.length; i++) { // Skip first "Choose a product..." option
+                    const option = options[i];
+                    const optionText = option.textContent.toLowerCase();
+                    
+                    let matches = false;
+                    if (searchTerm === '') {
+                        matches = true;
+                    } else if (searchWords.length === 1) {
+                        // Single word search
+                        matches = optionText.includes(searchTerm);
+                    } else {
+                        // Multi-word search - all words must match
+                        matches = searchWords.every(word => optionText.includes(word));
+                    }
+                    
+                    if (matches) {
+                        option.style.display = '';
+                        option.style.backgroundColor = searchTerm ? '#fff3cd' : ''; // Highlight matches
+                        visibleInThisVariant++;
+                    } else {
+                        option.style.display = 'none';
+                        option.style.backgroundColor = '';
+                    }
+                }
+                
+                // Update the select appearance based on search results
+                if (searchTerm && visibleInThisVariant === 0) {
+                    productSelect.style.borderColor = '#ffc107';
+                    productSelect.style.backgroundColor = '#fff3cd';
+                    productSelect.title = 'No products match your search';
+                } else {
+                    productSelect.style.borderColor = '';
+                    productSelect.style.backgroundColor = '';
+                    productSelect.title = '';
+                }
+            });
+            
+            totalVisible += visibleInThisVariant;
+            totalVariants++;
+        }
+    });
+    
+    // Update search results counter
+    updateEnhancedSearchResults(searchTerm, totalVisible, totalVariants);
+}
+
+function updateEnhancedSearchResults(searchTerm, visibleCount, totalVariants) {
+    const resultsDiv = document.getElementById('enhancedSearchResults');
+    const countSpan = document.getElementById('enhancedSearchCount');
+    
+    if (!resultsDiv || !countSpan) return;
+    
+    if (searchTerm) {
+        const totalProducts = window.productsData ? window.productsData.length : 0;
+        countSpan.innerHTML = `<i class="fas fa-info-circle me-1"></i>Found ${visibleCount} products across ${totalVariants} variant(s)`;
+        resultsDiv.style.display = 'block';
+        
+        // Add helpful message if no results
+        if (visibleCount === 0) {
+            countSpan.innerHTML = `<i class="fas fa-exclamation-triangle me-1 text-warning"></i>No products found. Try a different search term.`;
+        }
+    } else {
+        resultsDiv.style.display = 'none';
+    }
+}
+
+function clearEnhancedSearch() {
+    const searchInput = document.getElementById('enhancedProductSearch');
+    const resultsDiv = document.getElementById('enhancedSearchResults');
+    
+    if (searchInput) {
+        searchInput.value = '';
+        filterEnhancedProducts(); // Reset all dropdowns
+        searchInput.focus();
+    }
+    
+    if (resultsDiv) {
+        resultsDiv.style.display = 'none';
+    }
+    
+    // Reset any visual indicators and highlighting
+    const variants = document.querySelectorAll('.product-variant');
+    variants.forEach(variant => {
+        const productSelect = variant.querySelector('select[name*="_product"]');
+        if (productSelect) {
+            productSelect.style.borderColor = '';
+            productSelect.style.backgroundColor = '';
+            productSelect.title = '';
+            
+            // Reset option highlighting
+            const options = productSelect.getElementsByTagName('option');
+            for (let i = 0; i < options.length; i++) {
+                options[i].style.backgroundColor = '';
+                options[i].style.display = '';
+            }
+        }
+    });
+}
+
+function toggleEmergencyDelivery() {
+    const emergencyBtn = document.getElementById('emergencyBtn');
+    const emergencyInput = document.getElementById('emergency_delivery');
+    
+    if (emergencyInput.value === 'false') {
+        emergencyInput.value = 'true';
+        emergencyBtn.classList.remove('btn-danger');
+        emergencyBtn.classList.add('btn-warning');
+        emergencyBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Emergency Active';
+    } else {
+        emergencyInput.value = 'false';
+        emergencyBtn.classList.remove('btn-warning');
+        emergencyBtn.classList.add('btn-danger');
+        emergencyBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Emergency Delivery';
+    }
+}
+
+function toggleEmergencyDeliveryMultiple() {
+    const emergencyBtn = document.getElementById('emergencyBtnMultiple');
+    const emergencyInput = document.getElementById('multi_emergency_delivery');
+    
+    if (emergencyInput.value === 'false') {
+        emergencyInput.value = 'true';
+        emergencyBtn.classList.remove('btn-danger');
+        emergencyBtn.classList.add('btn-warning');
+        emergencyBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Emergency Active';
+    } else {
+        emergencyInput.value = 'false';
+        emergencyBtn.classList.remove('btn-warning');
+        emergencyBtn.classList.add('btn-danger');
+        emergencyBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Emergency Delivery';
+    }
+}
+
+function printReceipt(saleId) {
+    // Fetch sale details
+    fetch(`/get_sale_details/${saleId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showReceiptModal(data.sale);
+            } else {
+                showAlert('Error loading sale details', 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('Error loading sale details', 'danger');
+        });
+}
+
+function printLegacyGroupReceiptFromData(button) {
+    try {
+        const itemsData = button.getAttribute('data-items');
+        const itemsList = JSON.parse(itemsData);
+        printLegacyGroupReceipt(itemsList);
+    } catch (error) {
+        console.error('Error parsing items data:', error);
+        showAlert('Error loading receipt data', 'danger');
+    }
+}
+
+function printLegacyGroupReceipt(itemsList) {
+    // Create a consolidated receipt for legacy grouped items
+    if (!itemsList || itemsList.length === 0) {
+        showAlert('No items to print', 'warning');
+        return;
+    }
+    
+    const firstItem = itemsList[0];
+    const consolidatedSale = {
+        customer_name: firstItem.customer_name,
+        customer_phone: firstItem.customer_phone,
+        customer_address: firstItem.customer_address,
+        created_at: firstItem.created_at,
+        sold_by: firstItem.sold_by,
+        items: itemsList,
+        is_multiple_items: true,
+        product_total: itemsList.reduce((sum, item) => sum + (item.product_total || (item.total_price - (item.delivery_charge || 0))), 0),
+        delivery_charge: itemsList.reduce((sum, item) => sum + (item.delivery_charge || 0), 0),
+        total_price: itemsList.reduce((sum, item) => sum + item.total_price, 0),
+        total_items: itemsList.length,
+        total_quantity: itemsList.reduce((sum, item) => sum + (item.quantity || 0), 0),
+        notes: itemsList.find(item => item.notes)?.notes || '',
+        emergency_delivery: itemsList.some(item => item.emergency_delivery)
+    };
+    
+    showReceiptModal(consolidatedSale);
+}
+
+function showReceiptModal(sale) {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'receiptModal';
+    
+    // Check if this is a consolidated multiple items order
+    const isMultipleItems = sale.is_multiple_items || false;
+    const items = isMultipleItems ? sale.items || [] : [sale];
+    
+    console.log('Receipt data:', { sale, isMultipleItems, items }); // Debug log
+    
+    // Generate items table rows
+    let itemsTableRows = '';
+    if (isMultipleItems) {
+        // Multiple items - show each item
+        items.forEach(item => {
+            const itemTotal = item.item_total || (item.product_price * (item.quantity || 1));
+            itemsTableRows += `
+                <tr>
+                    <td style="text-align: left; vertical-align: top;">${item.product_name || 'Unknown Product'}</td>
+                    <td style="text-align: center; vertical-align: top;">${item.product_size || 'N/A'} / ${item.product_color || 'N/A'}</td>
+                    <td style="text-align: center; vertical-align: top;">${item.item_numbers || item.quantity || 0}</td>
+                    <td style="text-align: right; vertical-align: top;">৳${parseFloat(item.product_price || 0).toFixed(2)}</td>
+                    <td style="text-align: right; vertical-align: top; font-weight: bold;">৳${parseFloat(itemTotal).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+    } else {
+        // Single item - show as before
+        const itemTotal = sale.product_total || (sale.total_price - (sale.delivery_charge || 0));
+        itemsTableRows = `
+            <tr>
+                <td style="text-align: left; vertical-align: top;">${sale.product_name || 'Unknown Product'}</td>
+                <td style="text-align: center; vertical-align: top;">${sale.product_size || 'N/A'} / ${sale.product_color || 'N/A'}</td>
+                <td style="text-align: center; vertical-align: top;">${sale.item_numbers || sale.quantity || 0}</td>
+                <td style="text-align: right; vertical-align: top;">৳${parseFloat(sale.product_price || 0).toFixed(2)}</td>
+                <td style="text-align: right; vertical-align: top; font-weight: bold;">৳${parseFloat(itemTotal).toFixed(2)}</td>
+            </tr>
+        `;
+    }
+    
+    // Calculate totals with better fallbacks
+    let productTotal, deliveryCharge, grandTotal;
+    
+    if (isMultipleItems) {
+        productTotal = sale.product_total || items.reduce((sum, item) => sum + (item.item_total || (item.product_price * (item.quantity || 1))), 0);
+        deliveryCharge = sale.delivery_charge || 0;
+        grandTotal = sale.total_price || (productTotal + deliveryCharge);
+    } else {
+        productTotal = sale.product_total || (sale.total_price - (sale.delivery_charge || 0));
+        deliveryCharge = sale.original_delivery_charge || sale.delivery_charge || 0;
+        grandTotal = sale.total_price || (parseFloat(productTotal) + parseFloat(deliveryCharge));
+    }
+    
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Receipt - THEO CLOTHING</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="receiptContent" class="receipt-content">
+                        <div class="text-center mb-3">
+                            <h3 class="fw-bold">THEO CLOTHING</h3>
+                            <p class="mb-0">Receipt</p>
+                            ${isMultipleItems ? '<p class="mb-0"><small class="text-muted">Multiple Items Order</small></p>' : ''}
+                        </div>
+                        <hr>
+                        <div class="compact-row customer-info">
+                            <div class="compact-col-6">
+                                <strong>Customer:</strong><br>
+                                ${sale.customer_name || 'N/A'}<br>
+                                ${sale.customer_phone || 'N/A'}<br>
+                                ${sale.customer_address || 'N/A'}
+                            </div>
+                            <div class="compact-col-6 text-end">
+                                <strong>Date:</strong> ${sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'N/A'}<br>
+                                <strong>Time:</strong> ${sale.created_at ? new Date(sale.created_at).toLocaleTimeString() : 'N/A'}<br>
+                                <strong>Sold by:</strong> ${sale.sold_by || 'N/A'}
+                                ${isMultipleItems ? `<br><strong>Order ID:</strong> ${sale.order_id || 'N/A'}` : ''}
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="table-responsive">
+                            <table class="table table-sm" style="table-layout: fixed;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 35%; text-align: center;">Product</th>
+                                        <th style="width: 25%; text-align: center;">Size/Color</th>
+                                        <th style="width: 15%; text-align: center;">Items</th>
+                                        <th style="width: 12%; text-align: center;">Price</th>
+                                        <th style="width: 13%; text-align: center;">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsTableRows}
+                                </tbody>
+                            </table>
+                        </div>
+                        <hr>
+                        <div class="totals-section">
+                            <div class="compact-row">
+                                <div class="compact-col-8"><strong>Product Total:</strong></div>
+                                <div class="compact-col-4">৳${parseFloat(productTotal).toFixed(2)}</div>
+                            </div>
+                            ${deliveryCharge > 0 ? `
+                            <div class="compact-row">
+                                <div class="compact-col-8"><strong>Delivery Charge:</strong></div>
+                                <div class="compact-col-4">৳${parseFloat(deliveryCharge).toFixed(2)}</div>
+                            </div>
+                            <hr>
+                            ` : '<hr>'}
+                            <div class="compact-row grand-total">
+                                <div class="compact-col-8"><strong>Grand Total:</strong></div>
+                                <div class="compact-col-4"><strong>৳${parseFloat(grandTotal).toFixed(2)}</strong></div>
+                            </div>
+                        </div>
+                        ${sale.emergency_delivery ? `
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>EMERGENCY DELIVERY</strong>
+                        </div>
+                        ` : ''}
+                        ${sale.notes ? `
+                        <div class="mt-3">
+                            <strong>Notes:</strong><br>
+                            ${sale.notes}
+                        </div>
+                        ` : ''}
+                        <hr>
+                        <div class="thank-you">
+                            Thank you for your business!
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="printReceiptContent()">
+                        <i class="fas fa-print me-1"></i>Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    new bootstrap.Modal(modal).show();
+    
+    // Remove modal when hidden
+    modal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+    });
+}
+
+function printReceiptContent() {
+    const receiptContent = document.getElementById('receiptContent');
+    const printWindow = window.open('', '_blank');
+    
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Receipt - THEO CLOTHING</title>
+            <style>
+                @page {
+                    size: A4;
+                    margin: 10mm 15mm 10mm 15mm;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 11px;
+                    line-height: 1.3;
+                    margin: 0;
+                    padding: 0;
+                    max-width: 180mm;
+                }
+                .receipt-content {
+                    width: 100%;
+                    max-height: 140mm;
+                    overflow: hidden;
+                }
+                .text-center { text-align: center; }
+                .text-end { text-align: right; }
+                .fw-bold { font-weight: bold; }
+                .mb-0 { margin-bottom: 0; }
+                .mb-3 { margin-bottom: 0.6rem; }
+                .mt-3 { margin-top: 0.6rem; }
+                .me-1 { margin-right: 0.2rem; }
+                
+                /* Header */
+                h3 { 
+                    font-size: 18px; 
+                    margin: 0 0 0.4rem 0; 
+                    font-weight: bold; 
+                }
+                
+                /* Customer info */
+                .customer-info {
+                    font-size: 10px;
+                    line-height: 1.2;
+                    margin: 0.5rem 0;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    margin: 0.4rem 0;
+                }
+                th, td {
+                    padding: 4px 6px;
+                    border-bottom: 0.5px solid #ccc;
+                    text-align: left;
+                    vertical-align: top;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    font-size: 10px;
+                    line-height: 1.2;
+                }
+                th {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                    text-align: center;
+                    font-size: 9px;
+                    padding: 3px 4px;
+                }
+                
+                /* Column widths */
+                th:nth-child(1), td:nth-child(1) { width: 38%; font-size: 9px; } /* Product */
+                th:nth-child(2), td:nth-child(2) { width: 22%; text-align: center; font-size: 9px; } /* Size/Color */
+                th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; font-size: 9px; } /* Items */
+                th:nth-child(4), td:nth-child(4) { width: 14%; text-align: right; font-size: 9px; } /* Price */
+                th:nth-child(5), td:nth-child(5) { width: 14%; text-align: right; font-weight: bold; font-size: 9px; } /* Subtotal */
+                
+                /* Totals section */
+                .totals-section {
+                    font-size: 10px;
+                    line-height: 1.2;
+                    margin: 0.4rem 0;
+                }
+                .totals-section .row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 0.2rem 0;
+                }
+                .grand-total {
+                    font-weight: bold;
+                    font-size: 11px;
+                }
+                
+                hr {
+                    border: none;
+                    border-top: 0.5px solid #ccc;
+                    margin: 0.4rem 0;
+                }
+                
+                .alert {
+                    padding: 6px;
+                    border: 1px solid #dc3545;
+                    background-color: #f8d7da;
+                    color: #721c24;
+                    border-radius: 3px;
+                    font-size: 9px;
+                    margin: 0.4rem 0;
+                }
+                
+                /* Thank you message */
+                .thank-you {
+                    font-size: 9px;
+                    text-align: center;
+                    margin: 0.4rem 0 0 0;
+                    color: #666;
+                }
+                
+                /* Spacing */
+                .compact-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 10px;
+                    line-height: 1.2;
+                }
+                .compact-col-6 {
+                    width: 48%;
+                }
+                .compact-col-8 {
+                    width: 65%;
+                }
+                .compact-col-4 {
+                    width: 32%;
+                    text-align: right;
+                }
+            </style>
+        </head>
+        <body>
+            ${receiptContent.innerHTML}
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// Global variable to track table visibility state
+let isTableMinimized = false;
+
+function toggleProductTableVisibility() {
+    const table = document.getElementById('productsTable');
+    const toggleBtn = document.getElementById('toggleTableBtn');
+    const searchInput = document.getElementById('productSearch');
+    const minimizedIndicator = document.getElementById('minimizedIndicator');
+    
+    isTableMinimized = !isTableMinimized;
+    
+    if (isTableMinimized) {
+        // Minimize table - hide all rows except header
+        const rows = table.getElementsByTagName('tr');
+        for (let i = 1; i < rows.length; i++) { // Skip header row
+            rows[i].style.display = 'none';
+        }
+        
+        // Show minimized indicator
+        if (minimizedIndicator) {
+            minimizedIndicator.style.display = 'block';
+        }
+        
+        // Update button
+        toggleBtn.innerHTML = '<i class="fas fa-eye me-1"></i>Show Table';
+        toggleBtn.title = 'Show product table';
+        toggleBtn.classList.remove('btn-outline-info');
+        toggleBtn.classList.add('btn-info');
+        
+        // Clear search when minimizing
+        searchInput.value = '';
+        
+        // Update search placeholder to be more helpful
+        searchInput.placeholder = 'Search to show specific products...';
+        
+    } else {
+        // Hide minimized indicator
+        if (minimizedIndicator) {
+            minimizedIndicator.style.display = 'none';
+        }
+        
+        // Show table - restore visibility based on current search
+        toggleBtn.innerHTML = '<i class="fas fa-eye-slash me-1"></i>Minimize Table';
+        toggleBtn.title = 'Minimize product table';
+        toggleBtn.classList.remove('btn-info');
+        toggleBtn.classList.add('btn-outline-info');
+        
+        // Restore original placeholder
+        searchInput.placeholder = 'Search products in table...';
+        
+        // Restore rows based on current search
+        filterProducts();
+    }
+}
+
+function filterProducts() {
+    const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+    const table = document.getElementById('productsTable');
+    const rows = table.getElementsByTagName('tr');
+    
+    // If table is minimized and there's a search term, show matching results
+    // If table is minimized and no search term, keep hidden
+    // If table is not minimized, show/hide based on search
+    
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+        for (let i = 1; i < rows.length; i++) { // Skip header row
+            const row = rows[i];
+            const productText = row.textContent.toLowerCase();
+            
+            if (isTableMinimized) {
+                // When minimized, only show rows that match search
+                if (searchTerm && productText.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            } else {
+                // When not minimized, normal search behavior
+                if (productText.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        }
+    });
+}
+
+function filterSingleProducts() {
+    const searchTerm = document.getElementById('singleProductSearch').value.toLowerCase();
+    const select = document.getElementById('product_id');
+    const options = select.getElementsByTagName('option');
+    let visibleCount = 0;
+    
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+        for (let i = 1; i < options.length; i++) { // Skip first "Choose a product..." option
+            const option = options[i];
+            const productText = option.textContent.toLowerCase();
+            
+            // Enhanced search - check multiple fields
+            const productName = option.dataset.name ? option.dataset.name.toLowerCase() : '';
+            const productCategory = option.dataset.category ? option.dataset.category.toLowerCase() : '';
+            const productSize = option.dataset.size ? option.dataset.size.toLowerCase() : '';
+            const productColor = option.dataset.color ? option.dataset.color.toLowerCase() : '';
+            const productBarcode = option.dataset.barcode ? option.dataset.barcode.toLowerCase() : '';
+            const productBodySize = option.dataset.bodySize ? option.dataset.bodySize.toLowerCase() : '';
+            const productWaistSize = option.dataset.waistSize ? option.dataset.waistSize.toLowerCase() : '';
+            const productLength = option.dataset.length ? option.dataset.length.toLowerCase() : '';
+            
+            // Check if search term matches any of the product fields
+            const matches = productText.includes(searchTerm) ||
+                          productName.includes(searchTerm) ||
+                          productCategory.includes(searchTerm) ||
+                          productSize.includes(searchTerm) ||
+                          productColor.includes(searchTerm) ||
+                          productBarcode.includes(searchTerm) ||
+                          productBodySize.includes(searchTerm) ||
+                          productWaistSize.includes(searchTerm) ||
+                          productLength.includes(searchTerm);
+            
+            if (matches) {
+                option.style.display = '';
+                visibleCount++;
+            } else {
+                option.style.display = 'none';
+            }
+        }
+        
+        // Update search results counter
+        updateSearchResultsCounter(visibleCount, searchTerm);
+    });
+}
+
+function updateSearchResultsCounter(count, searchTerm) {
+    let counterElement = document.getElementById('singleSearchCounter');
+    if (!counterElement) {
+        counterElement = document.createElement('small');
+        counterElement.id = 'singleSearchCounter';
+        counterElement.className = 'text-muted mt-1';
+        document.getElementById('singleProductSearch').parentNode.parentNode.appendChild(counterElement);
+    }
+    
+    if (searchTerm) {
+        counterElement.textContent = `${count} product${count !== 1 ? 's' : ''} found`;
+        counterElement.style.display = 'block';
+    } else {
+        counterElement.style.display = 'none';
+    }
+}
+
+function validateMultipleSale() {
+    console.log('validateMultipleSale called, isClassicView:', window.isClassicView);
+    
+    if (window.isClassicView) {
+        // Use original validation for classic view
+        const itemInputs = document.querySelectorAll('.item-numbers-input');
+        console.log('Classic view - found item inputs:', itemInputs.length);
+        let hasValidItem = false;
+        let selectedProducts = [];
+        
+        itemInputs.forEach((input, index) => {
+            const itemNumbers = input.value.trim();
+            const itemCount = parseItemNumbers(itemNumbers);
+            console.log(`Input ${index}: value="${input.value}", count=${itemCount}`);
+            if (itemCount > 0) {
+                hasValidItem = true;
+                const productId = input.dataset.productId;
+                selectedProducts.push(`Product ${productId}: ${itemCount} items (${itemNumbers})`);
+            }
+        });
+        
+        if (!hasValidItem) {
+            alert('Please enter item numbers for at least one product');
+            return false;
+        }
+        console.log('Classic validation passed with products:', selectedProducts);
+        return true;
+    }
+    
+    // Enhanced view validation
+    const variants = document.querySelectorAll('.product-variant');
+    console.log('Enhanced view - found variants:', variants.length);
+    
+    if (variants.length === 0) {
+        alert('Please add at least one product variant');
+        return false;
+    }
+    
+    let hasValidVariant = false;
+    let invalidVariants = [];
+    let selectedProducts = [];
+    
+    variants.forEach((variant, index) => {
+        const productSelect = variant.querySelector('select[name*="_product"]');
+        const itemsInput = variant.querySelector('input[name*="_items"]');
+        
+        console.log(`Variant ${index + 1}:`, {
+            productSelected: productSelect ? productSelect.value : 'no select',
+            itemNumbers: itemsInput ? itemsInput.value : 'no input'
+        });
+        
+        if (productSelect && productSelect.value && itemsInput && itemsInput.value && itemsInput.value.trim()) {
+            hasValidVariant = true;
+            const productName = productSelect.selectedOptions[0].text;
+            const itemCount = parseItemNumbers(itemsInput.value);
+            selectedProducts.push(`${productName}: ${itemCount} items (${itemsInput.value})`);
+        } else if (productSelect && productSelect.value && (!itemsInput || !itemsInput.value || !itemsInput.value.trim())) {
+            invalidVariants.push(index + 1);
+        }
+    });
+    
+    if (invalidVariants.length > 0) {
+        alert(`Please enter item numbers for variant(s): ${invalidVariants.join(', ')}`);
+        return false;
+    }
+    
+    if (!hasValidVariant) {
+        alert('Please select at least one product with item numbers');
+        return false;
+    }
+    
+    console.log('Enhanced validation passed with products:', selectedProducts);
+    return true;
+}
+
+function exportSales() {
+    const dateFilter = document.getElementById('salesDateFilter').value;
+    let url = "{{ url_for('excel_export_sales') }}";
+    if (dateFilter) {
+        url += "?date=" + dateFilter;
+    }
+    window.location.href = url;
+}
+
+function exportToProduction() {
+    const dateFilter = document.getElementById('salesDateFilter').value;
+    let url = "{{ url_for('excel_export_to_production') }}";
+    if (dateFilter) {
+        url += "?date=" + dateFilter;
+    }
+    window.location.href = url;
+}
+
+function filterCustomers() {
+    const searchTerm = document.getElementById('customerSearch').value.toLowerCase();
+    const table = document.getElementById('recentSalesTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const customerCell = row.cells[0]; // Customer column
+        const customerText = customerCell.textContent.toLowerCase();
+        
+        // Check if customer name or phone contains search term
+        if (customerText.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+}
+
+function checkCustomerHistory() {
+    // Get customer details from both forms
+    const singleName = document.getElementById('customer_name')?.value.trim();
+    const singlePhone = document.getElementById('customer_phone')?.value.trim();
+    const multiName = document.getElementById('multi_customer_name')?.value.trim();
+    const multiPhone = document.getElementById('multi_customer_phone')?.value.trim();
+    
+    // Determine which form is active
+    const isMultipleForm = document.getElementById('multipleSaleForm').style.display !== 'none';
+    const customerName = isMultipleForm ? multiName : singleName;
+    const customerPhone = isMultipleForm ? multiPhone : singlePhone;
+    
+    // Only check if we have at least name or phone
+    if (!customerName && !customerPhone) {
+        hideCustomerHistoryBoxes();
+        return;
+    }
+    
+    // Show loading in the appropriate box
+    showCustomerHistoryLoading(customerName, customerPhone, isMultipleForm);
+    
+    // Make API call
+    const url = `/get_customer_history?name=${encodeURIComponent(customerName)}&phone=${encodeURIComponent(customerPhone)}`;
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.total_orders > 0) {
+                displayCustomerHistoryBox(data, customerName, customerPhone, isMultipleForm);
+            } else {
+                hideCustomerHistoryBoxes();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching customer history:', error);
+            hideCustomerHistoryBoxes();
+        });
+}
+
+function showCustomerHistoryLoading(customerName, customerPhone, isMultipleForm) {
+    const loadingHtml = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-spinner fa-spin me-2 text-info"></i>
+            <small class="text-muted">Loading customer history...</small>
+        </div>
+    `;
+    
+    if (isMultipleForm) {
+        if (customerName) {
+            document.getElementById('multiCustomerHistoryBox').style.display = 'block';
+            document.getElementById('multiCustomerHistoryContent').innerHTML = loadingHtml;
+        }
+        if (customerPhone) {
+            document.getElementById('multiCustomerPhoneHistoryBox').style.display = 'block';
+            document.getElementById('multiCustomerPhoneHistoryContent').innerHTML = loadingHtml;
+        }
+    } else {
+        if (customerName) {
+            document.getElementById('customerHistoryBox').style.display = 'block';
+            document.getElementById('customerHistoryContent').innerHTML = loadingHtml;
+        }
+        if (customerPhone) {
+            document.getElementById('customerPhoneHistoryBox').style.display = 'block';
+            document.getElementById('customerPhoneHistoryContent').innerHTML = loadingHtml;
+        }
+    }
+}
+
+function displayCustomerHistoryBox(data, customerName, customerPhone, isMultipleForm) {
+    const customerType = data.total_returned > 0 ? 
+        '<span class="badge bg-warning">Previous Customer with Returns</span>' : 
+        '<span class="badge bg-success">Returning Customer</span>';
+    
+    // Get unique product names from history
+    const uniqueProducts = [...new Set(data.history.map(order => order.product_name))];
+    const productList = uniqueProducts.slice(0, 5).join(', ');
+    const moreProducts = uniqueProducts.length > 5 ? ` +${uniqueProducts.length - 5} more` : '';
+    
+    const historyHtml = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <small class="text-muted">Orders: ${data.total_orders} | Returns: ${data.total_returned}</small><br>
+                <small class="text-muted">Last: ${data.last_order_date || 'N/A'}</small>
+            </div>
+            <div>
+                ${customerType}
+            </div>
+        </div>
+        ${data.history.length > 0 ? `
+            <div class="mt-2">
+                <small class="text-muted"><strong>Previous Items:</strong></small><br>
+                <small class="text-muted">${productList}${moreProducts}</small>
+            </div>
+            <div class="mt-1">
+                <small class="text-muted"><strong>Recent Orders:</strong></small><br>
+                <small class="text-muted">${data.history.slice(0, 3).map(order => 
+                    `${order.product_name} (${order.status === 'returned' ? 'Returned' : 'Completed'})`
+                ).join(', ')}</small>
+            </div>
+        ` : ''}
+    `;
+    
+    if (isMultipleForm) {
+        if (customerName) {
+            document.getElementById('multiCustomerHistoryBox').style.display = 'block';
+            document.getElementById('multiCustomerHistoryContent').innerHTML = historyHtml;
+        }
+        if (customerPhone) {
+            document.getElementById('multiCustomerPhoneHistoryBox').style.display = 'block';
+            document.getElementById('multiCustomerPhoneHistoryContent').innerHTML = historyHtml;
+        }
+    } else {
+        if (customerName) {
+            document.getElementById('customerHistoryBox').style.display = 'block';
+            document.getElementById('customerHistoryContent').innerHTML = historyHtml;
+        }
+        if (customerPhone) {
+            document.getElementById('customerPhoneHistoryBox').style.display = 'block';
+            document.getElementById('customerPhoneHistoryContent').innerHTML = historyHtml;
+        }
+    }
+}
+
+function hideCustomerHistoryBoxes() {
+    // Hide all customer history boxes
+    const boxes = [
+        'customerHistoryBox', 'customerPhoneHistoryBox', 
+        'multiCustomerHistoryBox', 'multiCustomerPhoneHistoryBox'
+    ];
+    
+    boxes.forEach(boxId => {
+        const box = document.getElementById(boxId);
+        if (box) {
+            box.style.display = 'none';
+        }
+    });
+}
+
+function loadReturnedCustomers() {
+    const contentDiv = document.getElementById('returnedCustomersContent');
+    
+    // Show loading
+    contentDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-3x text-muted mb-3"></i><h5 class="text-muted">Loading returned customers...</h5></div>';
+    
+    // Fetch returned customers data
+    fetch('/get_returned_customers')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayReturnedCustomers(data);
+            } else {
+                contentDiv.innerHTML = '<div class="alert alert-danger">Error loading returned customers: ' + (data.error || 'Unknown error') + '</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching returned customers:', error);
+            contentDiv.innerHTML = '<div class="alert alert-danger">Error loading returned customers. Please try again.</div>';
+        });
+}
+
+function displayReturnedCustomers(data) {
+    const contentDiv = document.getElementById('returnedCustomersContent');
+    
+    if (data.returned_customers.length === 0) {
+        contentDiv.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="text-success">No Returned Items</h5>
+                <p class="text-muted">All customers are satisfied with their purchases!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <h4>${data.total_returned_customers}</h4>
+                        <small>Customers with Returns</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h4>${data.total_returned_items}</h4>
+                        <small>Total Returned Items</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h4>৳${data.total_returned_value.toFixed(2)}</h4>
+                        <small>Total Returned Value</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white">
+                    <div class="card-body text-center">
+                        <h4>${(data.total_returned_value / data.total_returned_items).toFixed(2)}</h4>
+                        <small>Avg Return Value</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="accordion" id="returnedCustomersAccordion">
+    `;
+    
+    data.returned_customers.forEach((customer, index) => {
+        const accordionId = `customer-${index}`;
+        const firstReturnDate = customer.first_return_date ? new Date(customer.first_return_date.seconds * 1000).toLocaleDateString() : 'N/A';
+        const lastReturnDate = customer.last_return_date ? new Date(customer.last_return_date.seconds * 1000).toLocaleDateString() : 'N/A';
+        
+        html += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-${accordionId}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${accordionId}" aria-expanded="false" aria-controls="${accordionId}">
+                        <div class="d-flex justify-content-between w-100 me-3">
+                            <div>
+                                <strong>${customer.customer_name}</strong>
+                                <br><small class="text-muted">${customer.customer_phone}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-danger">${customer.total_returned_items} items</span>
+                                <br><small class="text-muted">৳${customer.total_returned_value.toFixed(2)}</small>
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+                <div id="${accordionId}" class="accordion-collapse collapse" aria-labelledby="heading-${accordionId}" data-bs-parent="#returnedCustomersAccordion">
+                    <div class="accordion-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Address:</strong> ${customer.customer_address || 'N/A'}<br>
+                                <strong>First Return:</strong> ${firstReturnDate}<br>
+                                <strong>Last Return:</strong> ${lastReturnDate}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Total Returns:</strong> ${customer.total_returned_items} items<br>
+                                <strong>Total Value:</strong> ৳${customer.total_returned_value.toFixed(2)}<br>
+                                <strong>Average per Item:</strong> ৳${(customer.total_returned_value / customer.total_returned_items).toFixed(2)}
+                            </div>
+                        </div>
+                        
+                        <h6>Returned Items:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Size/Color</th>
+                                        <th>Items</th>
+                                        <th>Value</th>
+                                        <th>Returned Date</th>
+                                        <th>Returned By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+        `;
+        
+        customer.returned_items.forEach(item => {
+            const returnedDate = item.returned_at ? new Date(item.returned_at.seconds * 1000).toLocaleDateString() : 'N/A';
+            const originalDate = item.original_order_date ? new Date(item.original_order_date.seconds * 1000).toLocaleDateString() : 'N/A';
+            
+            html += `
+                <tr>
+                    <td>${item.product_name}</td>
+                    <td>${item.product_category}</td>
+                    <td>${item.product_size} / ${item.product_color}</td>
+                    <td>${item.item_numbers || item.quantity}</td>
+                    <td>৳${item.total_price.toFixed(2)}</td>
+                    <td>${returnedDate}</td>
+                    <td>${item.returned_by}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    contentDiv.innerHTML = html;
+}
+
+function markAsReturnedSimple(saleId, buttonElement) {
+    // Confirm the action
+    if (!confirm('Are you sure you want to mark this sale as returned?')) {
+        return;
+    }
+    
+    // Update UI immediately
+    const row = buttonElement.closest('tr');
+    
+    if (row) {
+        const statusCell = row.cells[6]; // Status column
+        const actionsCell = row.cells[9]; // Actions column
+        
+        // Update status cell
+        statusCell.innerHTML = '<span class="badge bg-danger">Returned</span>';
+        
+        // Update actions cell
+        const today = new Date().toLocaleDateString();
+        actionsCell.innerHTML = `<small class="text-muted">Returned on ${today}</small>`;
+        
+        // Show success message
+        showNotification('Sale marked as returned successfully!', 'success');
+        
+        // Refresh returned customers section
+        setTimeout(loadReturnedCustomers, 500);
+    }
+    
+    // Make the actual request in background
+    fetch(`/mark_sale_returned/${saleId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+    })
+    .catch(error => {
+        console.error('Background request failed:', error);
+        // If background request fails, we could revert the UI change
+        // But for now, we'll keep the optimistic update
+    });
+}
+
+
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+function toggleEmergencyDeliveryForSale(saleId, buttonElement) {
+    // Toggle the button appearance
+    if (buttonElement.classList.contains('btn-outline-warning')) {
+        buttonElement.classList.remove('btn-outline-warning');
+        buttonElement.classList.add('btn-warning');
+        buttonElement.title = 'Emergency Active - Click to disable';
+    } else {
+        buttonElement.classList.remove('btn-warning');
+        buttonElement.classList.add('btn-outline-warning');
+        buttonElement.title = 'Emergency Delivery';
+    }
+    
+    // Make API call to update emergency delivery status
+    fetch(`/toggle_emergency_delivery/${saleId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Emergency delivery status updated successfully!', 'success');
+            // Reload the page to reflect the change in the table
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showNotification('Error updating emergency delivery status', 'danger');
+            // Revert button state on error
+            if (buttonElement.classList.contains('btn-warning')) {
+                buttonElement.classList.remove('btn-warning');
+                buttonElement.classList.add('btn-outline-warning');
+                buttonElement.title = 'Emergency Delivery';
+            } else {
+                buttonElement.classList.remove('btn-outline-warning');
+                buttonElement.classList.add('btn-warning');
+                buttonElement.title = 'Emergency Active - Click to disable';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error updating emergency delivery status', 'danger');
+        // Revert button state on error
+        if (buttonElement.classList.contains('btn-warning')) {
+            buttonElement.classList.remove('btn-warning');
+            buttonElement.classList.add('btn-outline-warning');
+            buttonElement.title = 'Emergency Delivery';
+        } else {
+            buttonElement.classList.remove('btn-outline-warning');
+            buttonElement.classList.add('btn-warning');
+            buttonElement.title = 'Emergency Active - Click to disable';
+        }
+    });
+}
+
+function toggleDeliveredForSale(saleId, buttonElement) {
+    // Toggle button appearance
+    if (buttonElement.classList.contains('btn-outline-success')) {
+        buttonElement.classList.remove('btn-outline-success');
+        buttonElement.classList.add('btn-success');
+        buttonElement.title = 'Delivered - Click to mark as not delivered';
+    } else {
+        buttonElement.classList.remove('btn-success');
+        buttonElement.classList.add('btn-outline-success');
+        buttonElement.title = 'Mark as Delivered';
+    }
+    
+    // Make API call to update delivered status
+    fetch(`/toggle_delivered/${saleId}`, {
+        method: 'POST',
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.redirected) {
+            throw new Error('Authentication required');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            
+            // Update row highlighting
+            const row = buttonElement.closest('tr');
+            if (data.delivered) {
+                row.style.backgroundColor = '#d4edda'; // Light green
+            } else {
+                row.style.backgroundColor = '';
+            }
+        } else {
+            showNotification(data.message, 'danger');
+            // Revert button state on error
+            if (buttonElement.classList.contains('btn-success')) {
+                buttonElement.classList.remove('btn-success');
+                buttonElement.classList.add('btn-outline-success');
+                buttonElement.title = 'Mark as Delivered';
+            } else {
+                buttonElement.classList.remove('btn-outline-success');
+                buttonElement.classList.add('btn-success');
+                buttonElement.title = 'Delivered - Click to mark as not delivered';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error updating delivered status', 'danger');
+        // Revert button state on error
+        if (buttonElement.classList.contains('btn-success')) {
+            buttonElement.classList.remove('btn-success');
+            buttonElement.classList.add('btn-outline-success');
+            buttonElement.title = 'Mark as Delivered';
+        } else {
+            buttonElement.classList.remove('btn-outline-success');
+            buttonElement.classList.add('btn-success');
+            buttonElement.title = 'Delivered - Click to mark as not delivered';
+        }
+    });
+}
+
+function openSizeManager() {
+    showNotification('Size manager will be implemented', 'info');
+}
+
+function openColorManager() {
+    showNotification('Color manager will be implemented', 'info');
+}
+
+function addSizeFromSales() {
+    const sizeName = prompt('Enter new size name:');
+    if (sizeName && sizeName.trim()) {
+        const formData = new FormData();
+        formData.append('name', sizeName.trim());
+        formData.append('description', '');
+        
+        fetch('/add_size_ajax', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        })
+        .then(response => {
+            if (response.redirected) {
+                throw new Error('Authentication required. Please refresh the page and try again.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showNotification('Size added successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error adding size', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding size:', error);
+            showNotification(error.message || 'Error adding size', 'danger');
+        });
+    }
+}
+
+function editSizeFromSales() {
+    const sizeSelect = document.getElementById('sale_size');
+    const selectedSize = sizeSelect.value;
+    
+    if (!selectedSize) {
+        showNotification('Please select a size to edit', 'warning');
+        return;
+    }
+    
+    // Get sizes with IDs
+    fetch('/get_sizes_ajax', {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.redirected) {
+            throw new Error('Authentication required. Please refresh the page and try again.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const size = data.sizes.find(s => s.name === selectedSize);
+            if (!size) {
+                showNotification('Size not found', 'danger');
+                return;
+            }
+            
+            const newName = prompt('Enter new size name:', selectedSize);
+            if (newName && newName.trim() && newName !== selectedSize) {
+                const formData = new FormData();
+                formData.append('name', newName.trim());
+                formData.append('description', size.description || '');
+                
+                fetch(`/edit_size_ajax/${size.id}`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        throw new Error('Authentication required. Please refresh the page and try again.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Size updated successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.message || 'Error updating size', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating size:', error);
+                    showNotification(error.message || 'Error updating size', 'danger');
+                });
+            }
+        } else {
+            showNotification(data.message || 'Error fetching sizes', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching sizes:', error);
+        showNotification(error.message || 'Error fetching sizes', 'danger');
+    });
+}
+
+function deleteSizeFromSales() {
+    const sizeSelect = document.getElementById('sale_size');
+    const selectedSize = sizeSelect.value;
+    
+    if (!selectedSize) {
+        showNotification('Please select a size to delete', 'warning');
+        return;
+    }
+    
+    // Get sizes with IDs
+    fetch('/get_sizes_ajax', {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.redirected) {
+            throw new Error('Authentication required. Please refresh the page and try again.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const size = data.sizes.find(s => s.name === selectedSize);
+            if (!size) {
+                showNotification('Size not found', 'danger');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete size "${selectedSize}"?`)) {
+                fetch(`/delete_size_ajax/${size.id}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        throw new Error('Authentication required. Please refresh the page and try again.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Size deleted successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.message || 'Error deleting size', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting size:', error);
+                    showNotification(error.message || 'Error deleting size', 'danger');
+                });
+            }
+        } else {
+            showNotification(data.message || 'Error fetching sizes', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching sizes:', error);
+        showNotification(error.message || 'Error fetching sizes', 'danger');
+    });
+}
+
+function addColorFromSales() {
+    const colorName = prompt('Enter new color name:');
+    if (colorName && colorName.trim()) {
+        const formData = new FormData();
+        formData.append('name', colorName.trim());
+        formData.append('description', '');
+        
+        fetch('/add_color_ajax', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        })
+        .then(response => {
+            if (response.redirected) {
+                throw new Error('Authentication required. Please refresh the page and try again.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showNotification('Color added successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Error adding color', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding color:', error);
+            showNotification(error.message || 'Error adding color', 'danger');
+        });
+    }
+}
+
+function editColorFromSales() {
+    const colorSelect = document.getElementById('sale_color');
+    const selectedColor = colorSelect.value;
+    
+    if (!selectedColor) {
+        showNotification('Please select a color to edit', 'warning');
+        return;
+    }
+    
+    // Get colors with IDs
+    fetch('/get_colors_ajax', {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.redirected) {
+            throw new Error('Authentication required. Please refresh the page and try again.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const color = data.colors.find(c => c.name === selectedColor);
+            if (!color) {
+                showNotification('Color not found', 'danger');
+                return;
+            }
+            
+            const newName = prompt('Enter new color name:', selectedColor);
+            if (newName && newName.trim() && newName !== selectedColor) {
+                const formData = new FormData();
+                formData.append('name', newName.trim());
+                formData.append('description', color.description || '');
+                
+                fetch(`/edit_color_ajax/${color.id}`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        throw new Error('Authentication required. Please refresh the page and try again.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Color updated successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.message || 'Error updating color', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating color:', error);
+                    showNotification(error.message || 'Error updating color', 'danger');
+                });
+            }
+        } else {
+            showNotification(data.message || 'Error fetching colors', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching colors:', error);
+        showNotification(error.message || 'Error fetching colors', 'danger');
+    });
+}
+
+function deleteColorFromSales() {
+    const colorSelect = document.getElementById('sale_color');
+    const selectedColor = colorSelect.value;
+    
+    if (!selectedColor) {
+        showNotification('Please select a color to delete', 'warning');
+        return;
+    }
+    
+    // Get colors with IDs
+    fetch('/get_colors_ajax', {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.redirected) {
+            throw new Error('Authentication required. Please refresh the page and try again.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const color = data.colors.find(c => c.name === selectedColor);
+            if (!color) {
+                showNotification('Color not found', 'danger');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete color "${selectedColor}"?`)) {
+                fetch(`/delete_color_ajax/${color.id}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        throw new Error('Authentication required. Please refresh the page and try again.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Color deleted successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.message || 'Error deleting color', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting color:', error);
+                    showNotification(error.message || 'Error deleting color', 'danger');
+                });
+            }
+        } else {
+            showNotification(data.message || 'Error fetching colors', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching colors:', error);
+        showNotification(error.message || 'Error fetching colors', 'danger');
+    });
+}
+
+
+
+
+
+
+
+</script>
+{% endblock %}

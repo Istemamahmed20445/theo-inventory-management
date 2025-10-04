@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Excel Import Production - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-file-excel me-2"></i>Excel Import - Production Orders
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Production Orders from Excel</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select Excel File (.xlsx) *</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".xlsx" required>
+                        <div class="form-text">Please upload an Excel file with the correct format</div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Import Production Orders
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Excel Format Guide</h5>
+            </div>
+            <div class="card-body">
+                <h6>Required Columns:</h6>
+                <ol class="small">
+                    <li><strong>Column A:</strong> Product Name (must match existing products)</li>
+                    <li><strong>Column B:</strong> Production Quantity</li>
+                    <li><strong>Column C:</strong> Status (pending, in_progress, completed)</li>
+                    <li><strong>Column D:</strong> Notes (optional)</li>
+                </ol>
+                
+                <hr>
+                
+                <h6>Example Format:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>D</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>T-Shirt</td>
+                                <td>100</td>
+                                <td>pending</td>
+                                <td>Summer collection</td>
+                            </tr>
+                            <tr>
+                                <td>Jeans</td>
+                                <td>50</td>
+                                <td>in_progress</td>
+                                <td>Blue denim</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>Note:</strong> Product names must exactly match existing products in your inventory.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Instructions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Before Importing:</h6>
+                        <ul>
+                            <li>Ensure all products exist in your inventory</li>
+                            <li>Use exact product names as they appear in the system</li>
+                            <li>Save your Excel file as .xlsx format</li>
+                            <li>Remove any empty rows</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>After Importing:</h6>
+                        <ul>
+                            <li>Check the production orders page for imported data</li>
+                            <li>Verify quantities and statuses are correct</li>
+                            <li>Update any incorrect information manually</li>
+                            <li>Start production workflow as needed</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <strong>Important:</strong> This import will create new production orders. Make sure your data is accurate before uploading.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

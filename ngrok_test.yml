@@ -1,0 +1,43 @@
+# ngrok Test Configuration for THEO Clothing Inventory Management System
+# Optimized settings for testing and development
+
+version: "2"
+authtoken: 33Q61MSrr3nEwb9R98vzuVlfkZQ_4DGw74jisoyAvo5RmJMsE
+# Get your authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
+
+tunnels:
+  test-inventory:
+    proto: http
+    addr: 5003
+    # subdomain: theo-inventory-test  # Uncomment and customize if you have a paid plan
+    inspect: true
+    # bind_tls: true  # Removed - not supported in v3
+    # region: us  # Removed - set globally instead
+    # log_level: info  # Removed - set globally instead
+    # log_format: logfmt  # Removed - set globally instead
+    # log: ngrok_test.log  # Removed - set globally instead
+    
+    # Test-specific settings
+    schemes: [https, http]  # Allow both HTTP and HTTPS for testing
+    host_header: localhost:5003
+    
+    # Optional: Custom headers for testing
+    # request_header:
+    #   add:
+    #     - "X-Test-Environment: ngrok"
+    #     - "X-Test-Mode: active"
+
+# Global settings optimized for testing
+console_ui: true
+console_ui_color: transparent
+update_channel: stable
+update_check: true
+
+# Web interface settings
+web_addr: localhost:4040
+log_level: info
+log_format: logfmt
+log: ngrok_test.log
+
+# Metadata for testing
+metadata: '{"environment": "test", "app": "theo-inventory", "version": "1.0"}'

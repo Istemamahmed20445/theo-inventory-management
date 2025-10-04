@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Production - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-industry me-2"></i>Production Management
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create Production Order</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_production') }}" id="productionForm">
+                    <!-- Product Search Section -->
+                    <div class="mb-3">
+                        <label for="productSearch" class="form-label">Search Products</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="productSearch" placeholder="Search by name, category, size, or color...">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Product Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Products *</label>
+                        <div id="productList" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                            {% for product in products %}
+                            <div class="form-check product-item" data-product-id="{{ product.id }}" data-product-name="{{ product.name }}" data-product-category="{{ product.category }}" data-product-size="{{ product.size }}" data-product-color="{{ product.color }}">
+                                <input class="form-check-input" type="checkbox" id="product_{{ product.id }}" name="selected_products" value="{{ product.id }}">
+                                <label class="form-check-label" for="product_{{ product.id }}">
+                                    <strong>{{ product.name }}</strong> - {{ product.category }} ({{ product.size }}, {{ product.color }})
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Selected Products with Quantities -->
+                    <div class="mb-3">
+                        <label class="form-label">Production Quantities *</label>
+                        <div id="selectedProducts" class="border rounded p-3">
+                            <p class="text-muted text-center">No products selected</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Production notes, specifications, etc."></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="fas fa-plus me-1"></i>Create Production Order
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Production Statistics</h5>
+                <div class="mt-2">
+                    <div class="input-group input-group-sm">
+                        <input type="date" class="form-control" id="productionDateFilter" placeholder="Select date">
+                        <a href="#" class="btn btn-outline-success" onclick="exportProduction()">
+                            <i class="fas fa-file-excel me-1"></i>Export Records
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ production_orders|length }}</h4>
+                        <small class="text-muted">Total Orders</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ production_orders|selectattr('status', 'equalto', 'completed')|list|length }}</h4>
+                        <small class="text-muted">Completed</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ production_orders|selectattr('status', 'equalto', 'pending')|list|length }}</h4>
+                        <small class="text-muted">Pending</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ production_orders|selectattr('status', 'equalto', 'in_progress')|list|length }}</h4>
+                        <small class="text-muted">In Progress</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Production Orders</h5>
+            </div>
+            <div class="card-body">
+                {% if production_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Size/Color</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th>Created By</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in production_orders %}
+                            <tr>
+                                <td>
+                                    {{ order.product_name }}
+                                    {% if order.order_type == 'multiple' %}
+                                        <span class="badge bg-info ms-1">Multi</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.product_category }}</td>
+                                <td>{{ order.product_size }} / {{ order.product_color }}</td>
+                                <td>{{ order.quantity }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if order.status == 'completed' %}bg-success
+                                        {% elif order.status == 'in_progress' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ order.status.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ order.created_by }}</td>
+                                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else 'N/A' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <form method="POST" action="{{ url_for('update_production_status', order_id=order.id) }}" style="display: inline;">
+                                            <input type="hidden" name="status" value="in_progress">
+                                            <button type="submit" class="btn btn-outline-warning btn-sm" 
+                                                    {% if order.status == 'in_progress' or order.status == 'completed' %}disabled{% endif %}
+                                                    title="Start Production">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('update_production_status', order_id=order.id) }}" style="display: inline;">
+                                            <input type="hidden" name="status" value="completed">
+                                            <button type="submit" class="btn btn-outline-success btn-sm" 
+                                                    {% if order.status == 'completed' %}disabled{% endif %}
+                                                    title="Mark Complete">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-industry fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No production orders found</h5>
+                    <p class="text-muted">Create your first production order to get started</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportProduction() {
+    const dateFilter = document.getElementById('productionDateFilter').value;
+    let url = "{{ url_for('excel_export_production') }}";
+    if (dateFilter) {
+        url += "?date=" + dateFilter;
+    }
+    window.location.href = url;
+}
+
+// Product search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const productSearch = document.getElementById('productSearch');
+    const clearSearch = document.getElementById('clearSearch');
+    const productItems = document.querySelectorAll('.product-item');
+    const selectedProductsDiv = document.getElementById('selectedProducts');
+    const submitBtn = document.getElementById('submitBtn');
+    const productionForm = document.getElementById('productionForm');
+    
+    let selectedProducts = {};
+    
+    // Search functionality
+    productSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        productItems.forEach(item => {
+            const productName = item.dataset.productName.toLowerCase();
+            const productCategory = item.dataset.productCategory.toLowerCase();
+            const productSize = item.dataset.productSize.toLowerCase();
+            const productColor = item.dataset.productColor.toLowerCase();
+            
+            const matches = productName.includes(searchTerm) || 
+                          productCategory.includes(searchTerm) || 
+                          productSize.includes(searchTerm) || 
+                          productColor.includes(searchTerm);
+            
+            item.style.display = matches ? 'block' : 'none';
+        });
+    });
+    
+    // Clear search
+    clearSearch.addEventListener('click', function() {
+        productSearch.value = '';
+        productItems.forEach(item => {
+            item.style.display = 'block';
+        });
+    });
+    
+    // Handle product selection
+    productItems.forEach(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', function() {
+            const productId = this.value;
+            const productName = item.dataset.productName;
+            const productCategory = item.dataset.productCategory;
+            const productSize = item.dataset.productSize;
+            const productColor = item.dataset.productColor;
+            
+            if (this.checked) {
+                selectedProducts[productId] = {
+                    name: productName,
+                    category: productCategory,
+                    size: productSize,
+                    color: productColor
+                };
+            } else {
+                delete selectedProducts[productId];
+            }
+            
+            updateSelectedProductsDisplay();
+        });
+    });
+    
+    // Update selected products display
+    function updateSelectedProductsDisplay() {
+        const productIds = Object.keys(selectedProducts);
+        
+        if (productIds.length === 0) {
+            selectedProductsDiv.innerHTML = '<p class="text-muted text-center">No products selected</p>';
+            submitBtn.disabled = true;
+            return;
+        }
+        
+        let html = '';
+        productIds.forEach(productId => {
+            const product = selectedProducts[productId];
+            html += `
+                <div class="row mb-2 align-items-center" data-product-id="${productId}">
+                    <div class="col-md-6">
+                        <strong>${product.name}</strong><br>
+                        <small class="text-muted">${product.category} (${product.size}, ${product.color})</small>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="number" class="form-control form-control-sm" 
+                               name="product_${productId}_quantity" 
+                               placeholder="Quantity" 
+                               min="1" 
+                               required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="removeProduct('${productId}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        selectedProductsDiv.innerHTML = html;
+        submitBtn.disabled = false;
+    }
+    
+    // Remove product function
+    window.removeProduct = function(productId) {
+        delete selectedProducts[productId];
+        
+        // Uncheck the checkbox
+        const checkbox = document.getElementById(`product_${productId}`);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+        
+        updateSelectedProductsDisplay();
+    };
+    
+    // Form validation
+    productionForm.addEventListener('submit', function(e) {
+        const productIds = Object.keys(selectedProducts);
+        if (productIds.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one product');
+            return;
+        }
+        
+        // Check if all selected products have quantities
+        let allValid = true;
+        productIds.forEach(productId => {
+            const quantityInput = document.querySelector(`input[name="product_${productId}_quantity"]`);
+            if (!quantityInput || !quantityInput.value || parseInt(quantityInput.value) < 1) {
+                allValid = false;
+            }
+        });
+        
+        if (!allValid) {
+            e.preventDefault();
+            alert('Please enter valid quantities for all selected products');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

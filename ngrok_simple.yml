@@ -1,0 +1,13 @@
+version: "2"
+authtoken: 33Q61MSrr3nEwb9R98vzuVlfkZQ_4DGw74jisoyAvo5RmJMsE
+
+tunnels:
+  inventory:
+    proto: http
+    addr: 5003
+    inspect: true
+
+region: us
+console_ui: true
+log_level: info
+log: ngrok.log

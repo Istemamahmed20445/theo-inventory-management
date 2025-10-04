@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        </h2>
+    </div>
+</div>
+
+<div class="row mb-4">
+    {% if has_permission('view_products') %}
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ total_products }}</h4>
+                        <p class="card-text d-none d-sm-block">Total Products</p>
+                        <p class="card-text d-sm-none">Products</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-box fa-2x d-none d-sm-block"></i>
+                        <i class="fas fa-box fa-lg d-sm-none"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">৳{{ "%.2f"|format(total_value) }}</h4>
+                        <p class="card-text d-none d-sm-block">Total Value</p>
+                        <p class="card-text d-sm-none">Value</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-dollar-sign fa-2x d-none d-sm-block"></i>
+                        <i class="fas fa-dollar-sign fa-lg d-sm-none"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ recent_activities|length }}</h4>
+                        <p class="card-text d-none d-sm-block">Recent Activities</p>
+                        <p class="card-text d-sm-none">Activities</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-history fa-2x d-none d-sm-block"></i>
+                        <i class="fas fa-history fa-lg d-sm-none"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 col-md-12 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th class="d-none d-sm-table-cell">Details</th>
+                                    <th>User</th>
+                                    <th class="d-none d-md-table-cell">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activities %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary">{{ activity.action }}</span>
+                                        <div class="d-sm-none small text-muted mt-1">{{ activity.details }}</div>
+                                    </td>
+                                    <td class="d-none d-sm-table-cell">{{ activity.details }}</td>
+                                    <td>{{ activity.user }}</td>
+                                    <td class="d-none d-md-table-cell">{{ activity.timestamp.strftime('%Y-%m-%d %H:%M') if activity.timestamp else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent activities</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if has_permission('add_products') %}
+                    <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Product
+                    </a>
+                    {% endif %}
+                    {% if has_permission('view_products') %}
+                    <a href="{{ url_for('products') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-box me-1"></i>View Products
+                    </a>
+                    {% endif %}
+                    {% if has_permission('excel_import') %}
+                    <a href="{{ url_for('excel_import') }}" class="btn btn-outline-success">
+                        <i class="fas fa-file-excel me-1"></i>Import Excel
+                    </a>
+                    <a href="{{ url_for('excel_export') }}" class="btn btn-outline-info">
+                        <i class="fas fa-download me-1"></i>Export Excel
+                    </a>
+                    {% endif %}
+                    {% if has_permission('sales_customer') %}
+                    <a href="{{ url_for('sales') }}" class="btn btn-outline-success">
+                        <i class="fas fa-shopping-cart me-1"></i>Sales
+                    </a>
+                    <a href="{{ url_for('customers') }}" class="btn btn-outline-info">
+                        <i class="fas fa-users me-1"></i>Customers
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('production') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-industry me-1"></i>Production
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

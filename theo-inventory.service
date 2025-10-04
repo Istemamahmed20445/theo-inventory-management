@@ -1,0 +1,42 @@
+[Unit]
+Description=THEO Clothing Inventory Management System
+After=network.target
+Wants=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/your/inventory/management/system
+Environment=PATH=/path/to/your/inventory/management/system/venv/bin
+Environment=FLASK_ENV=production
+Environment=SECRET_KEY=your-super-secret-production-key-here
+Environment=FIREBASE_PROJECT_ID=your-project-id
+Environment=FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+ExecStart=/path/to/your/inventory/management/system/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=theo-inventory
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/path/to/your/inventory/management/system/logs
+ReadWritePaths=/path/to/your/inventory/management/system/static/uploads
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,649 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-users-cog me-2"></i>Admin Panel
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">User Management</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Permissions</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <span class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'moderator' %}bg-warning{% else %}bg-info{% endif %}">
+                                        {{ user.role.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user.permissions %}
+                                        {% for permission in user.permissions %}
+                                            <span class="badge bg-secondary me-1">{{ permission }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">No permissions</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if user.active %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if user.active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary edit-user-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-username="{{ user.username }}" 
+                                                data-role="{{ user.role }}" 
+                                                data-permissions="{{ user.permissions|tojson }}" 
+                                                data-active="{{ user.active }}" 
+                                                title="Edit User">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger delete-user-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-username="{{ user.username }}" 
+                                                title="Delete User">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create New User</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_user') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username *</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password *</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Role *</label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="">Select Role</option>
+                            <option value="admin">Admin</option>
+                            <option value="moderator">Moderator</option>
+                            <option value="user">User</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="view_products" id="perm_view_products">
+                            <label class="form-check-label" for="perm_view_products">View Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="add_products" id="perm_add_products">
+                            <label class="form-check-label" for="perm_add_products">Add Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="edit_products" id="perm_edit_products">
+                            <label class="form-check-label" for="perm_edit_products">Edit Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="delete_products" id="perm_delete_products">
+                            <label class="form-check-label" for="perm_delete_products">Delete Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="excel_import" id="perm_excel_import">
+                            <label class="form-check-label" for="perm_excel_import">Excel Import/Export</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="view_reports" id="perm_view_reports">
+                            <label class="form-check-label" for="perm_view_reports">View Reports</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="sales_customer" id="perm_sales_customer">
+                            <label class="form-check-label" for="perm_sales_customer">Sales & Customer Management</label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-1"></i>Create User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">System Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ users|length }}</h4>
+                        <small class="text-muted">Total Users</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ users|selectattr('active')|list|length }}</h4>
+                        <small class="text-muted">Active Users</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">System Tools</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-info" onclick="generateMissingQRCodes()">
+                        <i class="fas fa-qrcode me-1"></i>Generate Missing QR Codes
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="testEdit()">
+                        <i class="fas fa-test me-1"></i>Test JavaScript
+                    </button>
+                    <hr class="my-3">
+                    <button type="button" class="btn btn-outline-danger" onclick="showHardResetModal()">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Hard Reset System
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId" name="user_id">
+                    
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="editUsername" name="username" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">New Password (leave empty to keep current)</label>
+                        <input type="password" class="form-control" id="editPassword" name="password">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editRole" class="form-label">Role</label>
+                        <select class="form-select" id="editRole" name="role">
+                            <option value="admin">Admin</option>
+                            <option value="moderator">Moderator</option>
+                            <option value="user">User</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="view_products" id="edit_perm_view_products">
+                            <label class="form-check-label" for="edit_perm_view_products">View Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="add_products" id="edit_perm_add_products">
+                            <label class="form-check-label" for="edit_perm_add_products">Add Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="edit_products" id="edit_perm_edit_products">
+                            <label class="form-check-label" for="edit_perm_edit_products">Edit Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="delete_products" id="edit_perm_delete_products">
+                            <label class="form-check-label" for="edit_perm_delete_products">Delete Products</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="excel_import" id="edit_perm_excel_import">
+                            <label class="form-check-label" for="edit_perm_excel_import">Excel Import/Export</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="view_reports" id="edit_perm_view_reports">
+                            <label class="form-check-label" for="edit_perm_view_reports">View Reports</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="permissions" value="sales_customer" id="edit_perm_sales_customer">
+                            <label class="form-check-label" for="edit_perm_sales_customer">Sales & Customer Management</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editActive" name="active">
+                            <label class="form-check-label" for="editActive">Active User</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the user "<span id="deleteUserName"></span>"?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteUser()">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hard Reset Modal -->
+<div class="modal fade" id="hardResetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Hard Reset System
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-skull-crossbones me-2"></i>DANGER: This will delete ALL data!
+                    </h6>
+                    <p class="mb-2">This action will permanently delete:</p>
+                    <ul class="mb-2">
+                        <li><strong>All Products</strong> - Complete product inventory</li>
+                        <li><strong>All Categories</strong> - Product categories</li>
+                        <li><strong>All Customers</strong> - Customer database</li>
+                        <li><strong>All Sales Records</strong> - Sales history</li>
+                        <li><strong>All Production Orders</strong> - Production records</li>
+                        <li><strong>All Activities</strong> - System activity logs</li>
+                    </ul>
+                    <p class="mb-0"><strong>Only admin users will remain.</strong></p>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="resetConfirmation" class="form-label">
+                        <strong>Type "RESET ALL DATA" to confirm:</strong>
+                    </label>
+                    <input type="text" class="form-control" id="resetConfirmation" 
+                           placeholder="Type exactly: RESET ALL DATA" 
+                           style="font-size: 16px;">
+                </div>
+                
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>This action cannot be undone!</strong> Make sure you have backups if needed.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmResetBtn" onclick="confirmHardReset()" disabled>
+                    <i class="fas fa-bomb me-1"></i>Reset All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+console.log('Admin panel JavaScript loaded');
+let currentUserId = null;
+
+// Test function to verify JavaScript is working
+function testEdit() {
+    console.log('Test edit function called');
+    alert('JavaScript is working!');
+}
+
+// Add event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit button event listeners
+    document.querySelectorAll('.edit-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const username = this.getAttribute('data-username');
+            const role = this.getAttribute('data-role');
+            const permissions = JSON.parse(this.getAttribute('data-permissions'));
+            const active = this.getAttribute('data-active') === 'true';
+            
+            console.log('Edit button clicked for user:', username);
+            editUser(userId, username, role, permissions, active);
+        });
+    });
+    
+    // Delete button event listeners
+    document.querySelectorAll('.delete-user-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const username = this.getAttribute('data-username');
+            
+            console.log('Delete button clicked for user:', username);
+            deleteUser(userId, username);
+        });
+    });
+});
+
+function editUser(userId, username, role, permissions, active) {
+    console.log('editUser function called with:', {userId, username, role, permissions, active});
+    
+    currentUserId = userId;
+    document.getElementById('editUserId').value = userId;
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editRole').value = role;
+    document.getElementById('editActive').checked = active;
+    
+    // Debug: Log current permissions
+    console.log('Editing user:', username);
+    console.log('Current permissions:', permissions);
+    
+    // Clear all permission checkboxes
+    document.querySelectorAll('#editUserModal input[name="permissions"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Set permissions
+    if (permissions) {
+        permissions.forEach(permission => {
+            const checkbox = document.getElementById('edit_perm_' + permission);
+            console.log('Looking for checkbox: edit_perm_' + permission, checkbox);
+            if (checkbox) {
+                checkbox.checked = true;
+                console.log('Set checkbox for:', permission);
+            } else {
+                console.warn('Checkbox not found for:', permission);
+            }
+        });
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+    modal.show();
+    console.log('Modal should be showing now');
+}
+
+function saveUser() {
+    const form = document.getElementById('editUserForm');
+    const formData = new FormData(form);
+    
+    // Add user ID to form data
+    formData.append('user_id', currentUserId);
+    
+    // Show loading state
+    const saveButton = document.querySelector('#editUserModal .btn-primary');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+    saveButton.disabled = true;
+    
+    fetch('/admin/update_user', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            modal.hide();
+            
+            // Show success toast/alert
+            showNotification('User updated successfully!', 'success');
+            
+            // Reload page after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showNotification('Error updating user: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error updating user', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    });
+}
+
+function deleteUser(userId, username) {
+    currentUserId = userId;
+    document.getElementById('deleteUserName').textContent = username;
+    new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+}
+
+function confirmDeleteUser() {
+    const deleteButton = document.querySelector('#deleteUserModal .btn-danger');
+    const originalText = deleteButton.innerHTML;
+    deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
+    deleteButton.disabled = true;
+    
+    fetch('/admin/delete_user', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: currentUserId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUserModal'));
+            modal.hide();
+            
+            showNotification('User deleted successfully!', 'success');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showNotification('Error deleting user: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error deleting user', 'error');
+    })
+    .finally(() => {
+        deleteButton.innerHTML = originalText;
+        deleteButton.disabled = false;
+    });
+}
+
+// Notification function
+function showNotification(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 10000; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+function generateMissingQRCodes() {
+    if (confirm('This will generate QR codes for all products that don\'t have them. Continue?')) {
+        fetch('/admin/generate_missing_qr_codes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating QR codes');
+        });
+    }
+}
+
+function showHardResetModal() {
+    const modal = new bootstrap.Modal(document.getElementById('hardResetModal'));
+    modal.show();
+    
+    // Clear confirmation input
+    document.getElementById('resetConfirmation').value = '';
+    document.getElementById('confirmResetBtn').disabled = true;
+    
+    // Add input listener for confirmation
+    document.getElementById('resetConfirmation').addEventListener('input', function() {
+        const confirmation = this.value.trim();
+        const confirmBtn = document.getElementById('confirmResetBtn');
+        
+        if (confirmation === 'RESET ALL DATA') {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('btn-outline-danger');
+            confirmBtn.classList.add('btn-danger');
+        } else {
+            confirmBtn.disabled = true;
+            confirmBtn.classList.remove('btn-danger');
+            confirmBtn.classList.add('btn-outline-danger');
+        }
+    });
+}
+
+function confirmHardReset() {
+    const confirmation = document.getElementById('resetConfirmation').value.trim();
+    
+    if (confirmation !== 'RESET ALL DATA') {
+        alert('Please type "RESET ALL DATA" exactly to confirm.');
+        return;
+    }
+    
+    // Final confirmation
+    if (!confirm('FINAL WARNING: This will delete ALL inventory data permanently!\n\nAre you absolutely sure you want to continue?')) {
+        return;
+    }
+    
+    const confirmBtn = document.getElementById('confirmResetBtn');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resetting...';
+    confirmBtn.disabled = true;
+    
+    fetch('/admin/hard_reset', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            confirmation: confirmation
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('hardResetModal'));
+            modal.hide();
+            
+            // Show success message with details
+            let message = 'Hard reset completed successfully!\n\nDeleted:\n';
+            if (data.deleted_counts) {
+                Object.entries(data.deleted_counts).forEach(([collection, count]) => {
+                    message += `• ${collection}: ${count} items\n`;
+                });
+            }
+            
+            alert(message);
+            
+            // Redirect to dashboard after reset
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 2000);
+            
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error during hard reset');
+    })
+    .finally(() => {
+        // Restore button state
+        confirmBtn.innerHTML = originalText;
+        confirmBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

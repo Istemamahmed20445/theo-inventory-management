@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Products - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-box me-2"></i>Products
+            </h2>
+            <div class="btn-group">
+                <button type="button" class="btn btn-success" onclick="openBarcodeScanner(handleBarcodeScan)">
+                    <i class="fas fa-qrcode me-1"></i>Scan Barcode
+                </button>
+                {% if has_permission('add_products') %}
+                <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Product
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="searchInput" placeholder="Search products...">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <select class="form-select" id="categoryFilter">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+            <option value="{{ category.name }}">{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    {% for product in products %}
+    <div class="col-md-6 col-lg-4 mb-4 product-card" data-name="{{ product.name|lower }}" data-category="{{ product.category }}">
+        <div class="card h-100">
+            {% if product.image_url %}
+            <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px; overflow: hidden;">
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            </div>
+            {% else %}
+            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                <i class="fas fa-image fa-3x text-muted"></i>
+            </div>
+            {% endif %}
+            
+            <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text">
+                    <small class="text-muted">
+                        <i class="fas fa-tag me-1"></i>{{ product.category }}<br>
+                        <i class="fas fa-ruler me-1"></i>{{ product.size }}<br>
+                        <i class="fas fa-palette me-1"></i>{{ product.color }}
+                    </small>
+                </p>
+                
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <strong>Price:</strong> ৳{{ "%.2f"|format(product.price) }}
+                    </div>
+                </div>
+                
+                {% if product.description %}
+                <p class="card-text">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                {% endif %}
+            </div>
+            
+            <div class="card-footer">
+                <div class="btn-group w-100" role="group">
+                    {% if has_permission('edit_products') %}
+                    <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showBarcode('{{ product.barcode }}', '{{ product.qr_code_url }}')">
+                        <i class="fas fa-barcode"></i>
+                    </button>
+                    {% if has_permission('delete_products') %}
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteProduct('{{ product.id }}', '{{ product.name }}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not products %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-box fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No products found</h4>
+            <p class="text-muted">Start by adding your first product</p>
+            <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Add Product
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <nav aria-label="Products pagination">
+            <ul class="pagination justify-content-center">
+                {% if has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                    {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                    </li>
+                    {% elif p == 4 or p == total_pages - 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        
+        <div class="text-center text-muted">
+            <small>Showing {{ ((page - 1) * 20) + 1 }} to {{ [page * 20, total_products]|min }} of {{ total_products }} products</small>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Barcode Modal -->
+<div class="modal fade" id="barcodeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Product Barcode</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p><strong>Barcode:</strong> <span id="barcodeText"></span></p>
+                <div id="barcodeImage"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the product "<span id="deleteProductName"></span>"?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="#" id="deleteConfirmBtn" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showBarcode(barcode, qrCodeUrl) {
+    document.getElementById('barcodeText').textContent = barcode;
+    document.getElementById('barcodeImage').innerHTML = '<img src="' + qrCodeUrl + '" class="img-fluid" alt="QR Code">';
+    new bootstrap.Modal(document.getElementById('barcodeModal')).show();
+}
+
+function handleBarcodeScan(barcode) {
+    // Look up product by barcode
+    fetch(`/lookup_product_by_barcode/${barcode}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show product details
+                showProductDetails(data.product);
+            } else {
+                // Show error message
+                showAlert('Product not found', 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Error looking up product', 'danger');
+        });
+}
+
+function showProductDetails(product) {
+    // Create modal to show product details
+    const modalHTML = `
+        <div class="modal fade" id="productDetailsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-box me-2"></i>Product Found
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                ${product.image_url ? 
+                                    `<img src="${product.image_url}" class="img-fluid rounded" alt="${product.name}">` :
+                                    '<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;"><i class="fas fa-image fa-3x text-muted"></i></div>'
+                                }
+                            </div>
+                            <div class="col-md-8">
+                                <h4>${product.name}</h4>
+                                <p><strong>Category:</strong> ${product.category}</p>
+                                <p><strong>Size:</strong> ${product.size}</p>
+                                <p><strong>Color:</strong> ${product.color}</p>
+                                <p><strong>Price:</strong> $${product.price}</p>
+                                <p><strong>Barcode:</strong> ${product.barcode}</p>
+                                ${product.description ? `<p><strong>Description:</strong> ${product.description}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <a href="/edit_product/${product.id}" class="btn btn-primary">
+                            <i class="fas fa-edit me-1"></i>Edit Product
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('productDetailsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('productDetailsModal')).show();
+}
+
+function showAlert(message, type) {
+    const alertHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Add alert to top of page
+    const container = document.querySelector('.container-fluid');
+    container.insertAdjacentHTML('afterbegin', alertHTML);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const alert = container.querySelector('.alert');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function deleteProduct(productId, productName) {
+    document.getElementById('deleteProductName').textContent = productName;
+    document.getElementById('deleteConfirmBtn').href = "{{ url_for('delete_product', product_id='') }}" + productId;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Combined search and filter functionality
+function filterProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    const productCards = document.querySelectorAll('.product-card');
+    
+    productCards.forEach(card => {
+        const productName = card.dataset.name;
+        const productCategory = card.dataset.category;
+        
+        // Check search term match
+        const matchesSearch = productName.includes(searchTerm);
+        
+        // Check category match
+        const matchesCategory = selectedCategory === '' || productCategory === selectedCategory;
+        
+        // Show card only if both conditions are met
+        if (matchesSearch && matchesCategory) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Add event listeners
+document.getElementById('searchInput').addEventListener('input', filterProducts);
+document.getElementById('categoryFilter').addEventListener('change', filterProducts);
+</script>
+{% endblock %}

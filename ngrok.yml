@@ -1,0 +1,23 @@
+# ngrok configuration file for THEO Clothing Inventory Management System
+# This file contains ngrok settings for optimal performance
+
+version: "2"
+authtoken: # Add your ngrok authtoken here
+# Get your authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
+
+tunnels:
+  inventory-system:
+    proto: http
+    addr: 5003
+    subdomain: # Optional: specify a custom subdomain (requires paid plan)
+    hostname: # Optional: specify a custom hostname (requires paid plan)
+    inspect: true
+    bind_tls: true
+    region: us # Options: us, eu, ap, au, sa, jp, in
+    log_level: info
+    log_format: logfmt
+    log: ngrok.log
+
+# Global settings
+console_ui: true
+console_ui_color: transparent

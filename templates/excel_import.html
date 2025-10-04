@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Excel Import - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="fas fa-file-excel me-2"></i>Excel Import/Export
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Products from Excel</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select Excel File (.xlsx)</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".xlsx" required>
+                        <div class="form-text">Upload an Excel file with product data</div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-upload me-1"></i>Import Products
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Excel Format Requirements</h5>
+            </div>
+            <div class="card-body">
+                <p>Your Excel file should have the following columns in order:</p>
+                <ol>
+                    <li><strong>Name</strong> - Product name</li>
+                    <li><strong>Category</strong> - Product category</li>
+                    <li><strong>Size</strong> - Product size</li>
+                    <li><strong>Color</strong> - Product color</li>
+                    <li><strong>Price</strong> - Product price (number)</li>
+                    <li><strong>Quantity</strong> - Stock quantity (number)</li>
+                    <li><strong>Min Stock</strong> - Minimum stock level (number)</li>
+                    <li><strong>Description</strong> - Product description (optional)</li>
+                </ol>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> The first row should contain headers. Data should start from the second row.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Export Products to Excel</h5>
+            </div>
+            <div class="card-body">
+                <p>Download all products data to an Excel file for backup or external processing.</p>
+                
+                <div class="d-grid">
+                    <a href="{{ url_for('excel_export') }}" class="btn btn-primary">
+                        <i class="fas fa-download me-1"></i>Export Products
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Sample Excel Template</h5>
+            </div>
+            <div class="card-body">
+                <p>Download a sample Excel template to see the correct format:</p>
+                
+                <div class="d-grid">
+                    <button type="button" class="btn btn-outline-secondary" onclick="downloadTemplate()">
+                        <i class="fas fa-file-download me-1"></i>Download Template
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Use the exact column order shown above</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Ensure price and quantity are numbers</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Leave empty cells for optional fields</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Barcodes will be generated automatically</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Images cannot be imported via Excel</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Import History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No import history available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function downloadTemplate() {
+    // Create a sample Excel file
+    const data = [
+        ['Name', 'Category', 'Size', 'Color', 'Price', 'Quantity', 'Min Stock', 'Description'],
+        ['Cotton T-Shirt', 'T-Shirt', 'M', 'Blue', '25.99', '100', '10', 'Comfortable cotton t-shirt'],
+        ['Denim Jeans', 'Pants', '32', 'Blue', '49.99', '50', '5', 'Classic denim jeans'],
+        ['Summer Dress', 'Dress', 'M', 'Red', '39.99', '25', '3', 'Light summer dress']
+    ];
+    
+    // Convert to CSV
+    const csvContent = data.map(row => row.join(',')).join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'product_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// File validation
+document.getElementById('file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (!file.name.endsWith('.xlsx')) {
+            alert('Please select an Excel file (.xlsx)');
+            e.target.value = '';
+        } else if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            alert('File size too large. Please select a file smaller than 10MB');
+            e.target.value = '';
+        }
+    }
+});
+</script>
+{% endblock %}

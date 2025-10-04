@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Login - THEO CLOTHING INVENTORY{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center py-3">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-tshirt fa-3x text-primary mb-3"></i>
+                            <h3 class="mb-2">THEO CLOTHING</h3>
+                            <h4 class="text-primary mb-2">INVENTORY</h4>
+                            <p class="text-muted small">Professional Management System</p>
+                        </div>
+                        
+                        <form method="POST" class="needs-validation" novalidate>
+                            <div class="mb-3">
+                                <label for="username" class="form-label fw-semibold">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0" id="username" name="username" required 
+                                           placeholder="Enter your username" style="font-size: 16px;">
+                                </div>
+                                <div class="invalid-feedback">
+                                    Please enter your username.
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-semibold">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-lock text-muted"></i>
+                                    </span>
+                                    <input type="password" class="form-control border-start-0" id="password" name="password" required 
+                                           placeholder="Enter your password" style="font-size: 16px;">
+                                </div>
+                                <div class="invalid-feedback">
+                                    Please enter your password.
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Secure Login Portal
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Default credentials info for development -->
+                <div class="text-center mt-3">
+                    <div class="card bg-light border-0">
+                        <div class="card-body py-2">
+                            <small class="text-muted">
+                                <strong>Default Login:</strong><br>
+                                Username: <code>admin</code> | Password: <code>admin123</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    
+    // Mobile-specific optimizations
+    if (window.innerWidth <= 768) {
+        // Focus on username field on mobile
+        setTimeout(() => {
+            usernameInput.focus();
+        }, 300);
+        
+        // Prevent zoom on input focus
+        [usernameInput, passwordInput].forEach(input => {
+            input.style.fontSize = '16px';
+        });
+    }
+    
+    // Form submission validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Real-time validation
+    usernameInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+        }
+    });
+    
+    passwordInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+        }
+    });
+    
+    // Handle orientation change
+    window.addEventListener('orientationchange', function() {
+        setTimeout(() => {
+            // Recalculate viewport height
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }, 100);
+    });
+    
+    // Auto-fill demo credentials on mobile (for testing)
+    if (window.innerWidth <= 768 && window.location.hostname === 'localhost') {
+        const demoBtn = document.createElement('button');
+        demoBtn.type = 'button';
+        demoBtn.className = 'btn btn-outline-secondary btn-sm mt-2 w-100';
+        demoBtn.innerHTML = '<i class="fas fa-magic me-1"></i>Fill Demo Credentials';
+        demoBtn.onclick = function() {
+            usernameInput.value = 'admin';
+            passwordInput.value = 'admin123';
+            usernameInput.classList.add('is-valid');
+            passwordInput.classList.add('is-valid');
+            this.remove();
+        };
+        
+        const formGroup = document.querySelector('.d-grid');
+        formGroup.parentNode.insertBefore(demoBtn, formGroup);
+    }
+});
+</script>
+{% endblock %}
