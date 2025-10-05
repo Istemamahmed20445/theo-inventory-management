@@ -17,7 +17,7 @@ class Config:
     
     # Firebase configuration
     FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', 'inventory-3098f')
-    FIREBASE_STORAGE_BUCKET = os.environ.get('FIREBASE_STORAGE_BUCKET', 'inventory-3098f-p2f4t')
+    FIREBASE_STORAGE_BUCKET = os.environ.get('FIREBASE_STORAGE_BUCKET', 'inventory-3098f.firebasestorage.app')
     
     # Email configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')

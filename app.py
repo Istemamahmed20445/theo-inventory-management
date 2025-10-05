@@ -193,7 +193,7 @@ resolved_storage_bucket = env_storage_bucket or config_storage_bucket
 
 # Set default bucket name if none specified
 if not resolved_storage_bucket:
-    resolved_storage_bucket = 'inventory-3098f-p2f4t'  # Correct bucket name
+    resolved_storage_bucket = 'inventory-3098f.firebasestorage.app'  # Correct bucket name
 
 if resolved_storage_bucket:
     firebase_options['storageBucket'] = resolved_storage_bucket
