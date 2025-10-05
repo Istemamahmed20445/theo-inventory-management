@@ -190,6 +190,11 @@ firebase_options = {}
 env_storage_bucket = os.environ.get('FIREBASE_STORAGE_BUCKET')
 config_storage_bucket = app.config.get('FIREBASE_STORAGE_BUCKET')
 resolved_storage_bucket = env_storage_bucket or config_storage_bucket
+
+# Set default bucket name if none specified
+if not resolved_storage_bucket:
+    resolved_storage_bucket = 'inventory-3098f.appspot.com'  # Default bucket name
+
 if resolved_storage_bucket:
     firebase_options['storageBucket'] = resolved_storage_bucket
 
@@ -198,8 +203,9 @@ if firebase_credentials:
     try:
         firebase_admin.initialize_app(firebase_credentials, firebase_options or None)
         db = firestore.client()
-        bucket = storage.bucket()
-        print("Firebase initialized successfully")
+        # Use the resolved bucket name explicitly
+        bucket = storage.bucket(resolved_storage_bucket)
+        print(f"Firebase initialized successfully with bucket: {resolved_storage_bucket}")
     except Exception as e:
         print(f"Error initializing Firebase: {e}")
         db = None
@@ -799,7 +805,7 @@ def generate_missing_qr_codes():
         products = products_ref.get()
         
         updated_count = 0
-        bucket = storage.bucket()
+        bucket = storage.bucket(resolved_storage_bucket)
         
         for product in products:
             product_data = product.to_dict()

@@ -16,8 +16,8 @@ class Config:
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'static/uploads')
     
     # Firebase configuration
-    FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', 'your-project-id')
-    FIREBASE_STORAGE_BUCKET = os.environ.get('FIREBASE_STORAGE_BUCKET', 'your-project-id.appspot.com')
+    FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', 'inventory-3098f')
+    FIREBASE_STORAGE_BUCKET = os.environ.get('FIREBASE_STORAGE_BUCKET', 'inventory-3098f.appspot.com')
     
     # Email configuration
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
