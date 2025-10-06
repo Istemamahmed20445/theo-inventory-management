@@ -828,6 +828,9 @@ function toggleSaleType(type) {
         // Set to Enhanced view for multiple items by default
         window.isClassicView = false;
         
+        // Initialize enhanced search functionality
+        initializeEnhancedSearch();
+        
         // Show Enhanced view and hide Classic view
         const productVariantsContainer = document.getElementById('productVariantsContainer');
         const originalProductsTable = document.getElementById('originalProductsTable');
@@ -1080,12 +1083,18 @@ function debounceEnhancedSearch() {
     const loadingDiv = document.getElementById('enhancedSearchLoading');
     const resultsDiv = document.getElementById('enhancedSearchResults');
     
+    // Show loading indicator
     if (loadingDiv) loadingDiv.style.display = 'block';
     if (resultsDiv) resultsDiv.style.display = 'none';
     
     enhancedSearchTimeout = setTimeout(() => {
-        filterEnhancedProducts();
-        if (loadingDiv) loadingDiv.style.display = 'none';
+        try {
+            filterEnhancedProducts();
+        } catch (error) {
+            console.error('Error in enhanced search:', error);
+        } finally {
+            if (loadingDiv) loadingDiv.style.display = 'none';
+        }
     }, 200); // Faster response for better UX
 }
 
@@ -1101,58 +1110,59 @@ function filterEnhancedProducts() {
     // Split search term into words for better matching
     const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
     
+    // Process all variants synchronously to avoid timing issues
     variants.forEach(variant => {
         const productSelect = variant.querySelector('select[name*="_product"]');
         if (productSelect) {
             const options = productSelect.getElementsByTagName('option');
             let visibleInThisVariant = 0;
             
-            // Use requestAnimationFrame for smooth performance
-            requestAnimationFrame(() => {
-                for (let i = 1; i < options.length; i++) { // Skip first "Choose a product..." option
-                    const option = options[i];
-                    const optionText = option.textContent.toLowerCase();
-                    
-                    let matches = false;
-                    if (searchTerm === '') {
-                        matches = true;
-                    } else if (searchWords.length === 1) {
-                        // Single word search
-                        matches = optionText.includes(searchTerm);
-                    } else {
-                        // Multi-word search - all words must match
-                        matches = searchWords.every(word => optionText.includes(word));
-                    }
-                    
-                    if (matches) {
-                        option.style.display = '';
-                        option.style.backgroundColor = searchTerm ? '#fff3cd' : ''; // Highlight matches
-                        visibleInThisVariant++;
-                    } else {
-                        option.style.display = 'none';
-                        option.style.backgroundColor = '';
-                    }
+            // Process options synchronously
+            for (let i = 1; i < options.length; i++) { // Skip first "Choose a product..." option
+                const option = options[i];
+                const optionText = option.textContent.toLowerCase();
+                
+                let matches = false;
+                if (searchTerm === '') {
+                    matches = true;
+                } else if (searchWords.length === 1) {
+                    // Single word search
+                    matches = optionText.includes(searchTerm);
+                } else {
+                    // Multi-word search - all words must match
+                    matches = searchWords.every(word => optionText.includes(word));
                 }
                 
-                // Update the select appearance based on search results
-                if (searchTerm && visibleInThisVariant === 0) {
-                    productSelect.style.borderColor = '#ffc107';
-                    productSelect.style.backgroundColor = '#fff3cd';
-                    productSelect.title = 'No products match your search';
+                if (matches) {
+                    option.style.display = '';
+                    option.style.backgroundColor = searchTerm ? '#fff3cd' : ''; // Highlight matches
+                    visibleInThisVariant++;
                 } else {
-                    productSelect.style.borderColor = '';
-                    productSelect.style.backgroundColor = '';
-                    productSelect.title = '';
+                    option.style.display = 'none';
+                    option.style.backgroundColor = '';
                 }
-            });
+            }
+            
+            // Update the select appearance based on search results
+            if (searchTerm && visibleInThisVariant === 0) {
+                productSelect.style.borderColor = '#ffc107';
+                productSelect.style.backgroundColor = '#fff3cd';
+                productSelect.title = 'No products match your search';
+            } else {
+                productSelect.style.borderColor = '';
+                productSelect.style.backgroundColor = '';
+                productSelect.title = '';
+            }
             
             totalVisible += visibleInThisVariant;
             totalVariants++;
         }
     });
     
-    // Update search results counter
-    updateEnhancedSearchResults(searchTerm, totalVisible, totalVariants);
+    // Update search results counter after all DOM updates are complete
+    setTimeout(() => {
+        updateEnhancedSearchResults(searchTerm, totalVisible, totalVariants);
+    }, 0);
 }
 
 function updateEnhancedSearchResults(searchTerm, visibleCount, totalVariants) {
@@ -1206,6 +1216,32 @@ function clearEnhancedSearch() {
             }
         }
     });
+}
+
+// Initialize enhanced search functionality
+function initializeEnhancedSearch() {
+    // Ensure search input exists and is properly initialized
+    const searchInput = document.getElementById('enhancedProductSearch');
+    if (searchInput) {
+        // Clear any existing search
+        searchInput.value = '';
+        
+        // Add event listener for better reliability
+        searchInput.removeEventListener('input', debounceEnhancedSearch);
+        searchInput.addEventListener('input', debounceEnhancedSearch);
+        
+        // Initial search to show all products
+        setTimeout(() => {
+            filterEnhancedProducts();
+        }, 100);
+    }
+}
+
+// Re-initialize search when new variants are added
+function reinitializeSearch() {
+    setTimeout(() => {
+        initializeEnhancedSearch();
+    }, 50);
 }
 
 function toggleEmergencyDelivery() {
@@ -2991,6 +3027,21 @@ function deleteSale(saleId) {
         });
     }
 }
+
+// Initialize search functionality when page loads
+window.addEventListener('load', function() {
+    // Small delay to ensure all elements are loaded
+    setTimeout(() => {
+        initializeEnhancedSearch();
+    }, 200);
+});
+
+// Also initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        initializeEnhancedSearch();
+    }, 100);
+});
 
 </script>
 {% endblock %}
