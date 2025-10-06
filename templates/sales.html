@@ -19,16 +19,29 @@
     
     /* Fix search bars visibility */
     .input-group {
-        margin-bottom: 10px;
+        margin-bottom: 15px !important;
+        display: flex !important;
+        width: 100% !important;
     }
     
     .input-group .form-control {
-        font-size: 16px; /* Prevents zoom on iOS */
-        padding: 10px;
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        padding: 12px !important;
+        flex: 1 !important;
+        display: block !important;
+        visibility: visible !important;
     }
     
     .input-group .btn {
-        padding: 10px 15px;
+        padding: 12px 15px !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .input-group-text {
+        display: flex !important;
+        align-items: center !important;
+        visibility: visible !important;
     }
     
     /* Make form fields more mobile-friendly */
@@ -148,6 +161,36 @@
     /* Stack form elements vertically on very small screens */
     .row .col-12 {
         margin-bottom: 10px;
+    }
+}
+
+/* Force search bars to be visible on all mobile devices */
+@media (max-width: 768px) {
+    #singleProductSearch,
+    #enhancedProductSearch {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 44px !important;
+        font-size: 16px !important;
+        padding: 12px !important;
+        margin: 0 !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+    }
+    
+    .input-group-sm #singleProductSearch,
+    .input-group-sm #enhancedProductSearch {
+        font-size: 16px !important;
+        padding: 12px !important;
+    }
+    
+    /* Ensure search containers are visible */
+    .mb-2, .mb-3, .mb-4 {
+        display: block !important;
+        visibility: visible !important;
     }
 }
 </style>
