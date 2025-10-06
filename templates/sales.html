@@ -28,21 +28,24 @@ window.isClassicView = true; // For single items, will be set to false for multi
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Create New Sale</h5>
-                <div class="btn-group btn-group-sm mt-2" role="group">
-                    <button type="button" class="btn btn-outline-primary active" id="singleSaleBtn" onclick="toggleSaleType('single')">
-                        <i class="fas fa-shopping-cart me-1"></i>Single Item
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" id="multipleSaleBtn" onclick="toggleSaleType('multiple')">
-                        <i class="fas fa-shopping-basket me-1"></i>Multiple Items
-                    </button>
+                <h5 class="card-title mb-2">Create New Sale</h5>
+                <!-- Mobile-friendly tab layout -->
+                <div class="d-flex flex-column flex-md-row gap-2">
+                    <div class="btn-group w-100 w-md-auto" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="singleSaleBtn" onclick="toggleSaleType('single')">
+                            <i class="fas fa-shopping-cart me-1"></i><span class="d-none d-sm-inline">Single Item</span><span class="d-sm-none">Single</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="multipleSaleBtn" onclick="toggleSaleType('multiple')">
+                            <i class="fas fa-shopping-basket me-1"></i><span class="d-none d-sm-inline">Multiple Items</span><span class="d-sm-none">Multiple</span>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
                 <!-- Single Item Sale Form -->
                 <form method="POST" action="{{ url_for('create_sale') }}" id="singleSaleForm">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="customer_name" class="form-label">Customer Name *</label>
                                 <div class="position-relative">
@@ -60,7 +63,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="customer_phone" class="form-label">Phone Number *</label>
                                 <div class="position-relative">
@@ -87,7 +90,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="product_id" class="form-label">Select Product *</label>
                                 <div class="mb-2">
@@ -125,7 +128,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="item_numbers" class="form-label">Item Numbers *</label>
                                 <input type="text" class="form-control" id="item_numbers" name="item_numbers" 
@@ -137,7 +140,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="sale_size" class="form-label">Size Override</label>
                                 <div class="input-group">
@@ -160,7 +163,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 <small class="text-muted">Override the product's default size if needed</small>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="sale_color" class="form-label">Color Override</label>
                                 <div class="input-group">
@@ -186,13 +189,13 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Unit Price</label>
                                 <div class="form-control-plaintext" id="unit_price">৳0.00</div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Product Total</label>
                                 <div class="form-control-plaintext" id="product_total">৳0.00</div>
@@ -201,7 +204,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="delivery_charge" class="form-label">Delivery Charge</label>
                                 <select class="form-select" id="delivery_charge" name="delivery_charge" onchange="calculateSingleTotal()">
@@ -211,7 +214,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Total Price</label>
                                 <div class="form-control-plaintext fw-bold text-success" id="total_price">৳0.00</div>
@@ -225,10 +228,10 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success btn-lg">
                             <i class="fas fa-cash-register me-1"></i>Complete Sale
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="toggleEmergencyDelivery()" id="emergencyBtn">
+                        <button type="button" class="btn btn-danger btn-lg" onclick="toggleEmergencyDelivery()" id="emergencyBtn">
                             <i class="fas fa-exclamation-triangle me-1"></i>Emergency Delivery
                         </button>
                     </div>
@@ -238,7 +241,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                 <!-- Multiple Item Sale Form -->
                 <form method="POST" action="{{ url_for('create_multiple_sale') }}" id="multipleSaleForm" style="display: none;">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="multi_customer_name" class="form-label">Customer Name *</label>
                                 <div class="position-relative">
@@ -256,7 +259,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="multi_customer_phone" class="form-label">Phone Number *</label>
                                 <div class="position-relative">
@@ -284,13 +287,14 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     
                         <!-- Enhanced Product Selection with Variants Support -->
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label mb-0">Select Products & Variants *</label>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="addProductVariant()">
+                            <!-- Mobile-friendly label and button layout -->
+                            <div class="mb-2">
+                                <label class="form-label mb-2">Select Products & Variants *</label>
+                                <div class="d-flex flex-column flex-sm-row gap-2">
+                                    <button type="button" class="btn btn-primary" onclick="addProductVariant()">
                                         <i class="fas fa-plus me-1"></i>Add Product Variant
                                     </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleProductInterface()" id="toggleInterfaceBtn">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="toggleProductInterface()" id="toggleInterfaceBtn">
                                         <i class="fas fa-exchange-alt me-1"></i>Switch to Classic View
                                     </button>
                                 </div>
@@ -428,13 +432,13 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Total Items</label>
                                 <div class="form-control-plaintext" id="total_items">0</div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Product Total</label>
                                 <div class="form-control-plaintext" id="product_grand_total">৳0.00</div>
@@ -443,7 +447,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="multi_delivery_charge" class="form-label">Delivery Charge</label>
                                 <select class="form-select" id="multi_delivery_charge" name="delivery_charge" onchange="calculateGrandTotal()">
@@ -453,7 +457,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Grand Total</label>
                                 <div class="form-control-plaintext fw-bold text-success" id="grand_total">৳0.00</div>
@@ -610,13 +614,14 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                         <td>{{ customer_group['sold_by'] }}</td>
                                         <td>{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
                                         <td>
-                                            <div class="btn-group" role="group">
+                                            <!-- Mobile-friendly action buttons -->
+                                            <div class="d-flex flex-wrap gap-1">
                                                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="printReceipt('{{ first_item.id }}')" title="Print Receipt">
                                                     <i class="fas fa-print"></i>
                                                 </button>
                                                 {% if first_item.get('status') != 'returned' %}
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAsReturnedSimple('{{ first_item.id }}', this)">
-                                                        <i class="fas fa-undo me-1"></i>Mark as Return
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAsReturnedSimple('{{ first_item.id }}', this)" title="Mark as Return">
+                                                        <i class="fas fa-undo"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleEmergencyDeliveryForSale('{{ first_item.id }}', this)" title="Emergency Delivery">
                                                         <i class="fas fa-exclamation-triangle"></i>
@@ -631,11 +636,13 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 {% else %}
-                                                    <small class="text-muted">Returned on {{ first_item.get('returned_at', '').strftime('%Y-%m-%d') if first_item.get('returned_at') else 'N/A' }}</small>
-                                                    <button type="button" class="btn btn-sm btn-outline-info ms-1" onclick="editSale('{{ first_item.id }}')" title="Edit Sale">
+                                                    <div class="w-100 mb-1">
+                                                        <small class="text-muted">Returned on {{ first_item.get('returned_at', '').strftime('%Y-%m-%d') if first_item.get('returned_at') else 'N/A' }}</small>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="editSale('{{ first_item.id }}')" title="Edit Sale">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="deleteSale('{{ first_item.id }}')" title="Delete Sale">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSale('{{ first_item.id }}')" title="Delete Sale">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 {% endif %}
@@ -716,13 +723,14 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                         <td>{{ customer_group['sold_by'] }}</td>
                                         <td>{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
                                         <td>
-                                            <div class="btn-group" role="group">
+                                            <!-- Mobile-friendly action buttons -->
+                                            <div class="d-flex flex-wrap gap-1">
                                                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="printReceipt('{{ item.id }}')" title="Print Receipt">
                                                     <i class="fas fa-print"></i>
                                                 </button>
                                                 {% if item.get('status') != 'returned' %}
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAsReturnedSimple('{{ item.id }}', this)">
-                                                        <i class="fas fa-undo me-1"></i>Mark as Return
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAsReturnedSimple('{{ item.id }}', this)" title="Mark as Return">
+                                                        <i class="fas fa-undo"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleEmergencyDeliveryForSale('{{ item.id }}', this)" title="Emergency Delivery">
                                                         <i class="fas fa-exclamation-triangle"></i>
@@ -737,11 +745,13 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 {% else %}
-                                                    <small class="text-muted">Returned on {{ item.get('returned_at', '').strftime('%Y-%m-%d') if item.get('returned_at') else 'N/A' }}</small>
-                                                    <button type="button" class="btn btn-sm btn-outline-info ms-1" onclick="editSale('{{ item.id }}')" title="Edit Sale">
+                                                    <div class="w-100 mb-1">
+                                                        <small class="text-muted">Returned on {{ item.get('returned_at', '').strftime('%Y-%m-%d') if item.get('returned_at') else 'N/A' }}</small>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="editSale('{{ item.id }}')" title="Edit Sale">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="deleteSale('{{ item.id }}')" title="Delete Sale">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSale('{{ item.id }}')" title="Delete Sale">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 {% endif %}
@@ -2152,12 +2162,12 @@ function displayReturnedCustomers(data) {
                 <div id="${accordionId}" class="accordion-collapse collapse" aria-labelledby="heading-${accordionId}" data-bs-parent="#returnedCustomersAccordion">
                     <div class="accordion-body">
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <strong>Address:</strong> ${customer.customer_address || 'N/A'}<br>
                                 <strong>First Return:</strong> ${firstReturnDate}<br>
                                 <strong>Last Return:</strong> ${lastReturnDate}
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <strong>Total Returns:</strong> ${customer.total_returned_items} items<br>
                                 <strong>Total Value:</strong> ৳${customer.total_returned_value.toFixed(2)}<br>
                                 <strong>Average per Item:</strong> ৳${(customer.total_returned_value / customer.total_returned_items).toFixed(2)}
@@ -2775,7 +2785,7 @@ function createEditModal(sale, products, sizes, colors) {
     // Create modal HTML
     const modalHTML = `
         <div class="modal fade" id="editSaleModal" tabindex="-1" aria-labelledby="editSaleModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-lg modal-fullscreen-md-down">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="editSaleModalLabel">
@@ -2786,13 +2796,13 @@ function createEditModal(sale, products, sizes, colors) {
                     <div class="modal-body">
                         <form id="editSaleForm">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label for="edit_customer_name" class="form-label">Customer Name *</label>
                                         <input type="text" class="form-control" id="edit_customer_name" name="customer_name" value="${sale.customer_name || ''}" required>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label for="edit_customer_phone" class="form-label">Phone Number *</label>
                                         <input type="tel" class="form-control" id="edit_customer_phone" name="customer_phone" value="${sale.customer_phone || ''}" required>
@@ -2801,7 +2811,7 @@ function createEditModal(sale, products, sizes, colors) {
                             </div>
                             
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label for="edit_product_id" class="form-label">Product *</label>
                                         <select class="form-select" id="edit_product_id" name="product_id" required onchange="updateEditProductInfo()">
@@ -2812,7 +2822,7 @@ function createEditModal(sale, products, sizes, colors) {
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label for="edit_quantity" class="form-label">Quantity *</label>
                                         <input type="number" class="form-control" id="edit_quantity" name="quantity" value="${sale.quantity || 1}" min="1" required onchange="calculateEditTotal()">
@@ -2870,13 +2880,13 @@ function createEditModal(sale, products, sizes, colors) {
                             </div>
                             
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Unit Price</label>
                                         <div class="form-control-plaintext" id="edit_unit_price">৳0.00</div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Total Price</label>
                                         <div class="form-control-plaintext fw-bold text-success" id="edit_total_price">৳0.00</div>
