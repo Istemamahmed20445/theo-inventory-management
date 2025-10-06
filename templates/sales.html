@@ -3,6 +3,154 @@
 {% block title %}Sales - THEO CLOTHING INVENTORY{% endblock %}
 
 {% block content %}
+<style>
+/* Mobile-specific CSS fixes */
+@media (max-width: 768px) {
+    /* Make tabs more mobile-friendly */
+    .btn-group {
+        width: 100% !important;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    /* Fix search bars visibility */
+    .input-group {
+        margin-bottom: 10px;
+    }
+    
+    .input-group .form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 10px;
+    }
+    
+    .input-group .btn {
+        padding: 10px 15px;
+    }
+    
+    /* Make form fields more mobile-friendly */
+    .form-control, .form-select {
+        font-size: 16px;
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    /* Fix table responsiveness */
+    .table-responsive {
+        border: none;
+    }
+    
+    .table {
+        font-size: 14px;
+    }
+    
+    .table th, .table td {
+        padding: 8px 4px;
+        vertical-align: middle;
+    }
+    
+    /* Make action buttons more touch-friendly */
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 14px;
+        margin: 2px;
+        min-width: 40px;
+    }
+    
+    /* Fix modal for mobile */
+    .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .modal-content {
+        border-radius: 10px;
+    }
+    
+    /* Better spacing for mobile */
+    .card-body {
+        padding: 15px;
+    }
+    
+    .mb-3 {
+        margin-bottom: 20px !important;
+    }
+    
+    /* Fix button groups on mobile */
+    .d-flex.gap-1 {
+        gap: 5px !important;
+    }
+    
+    /* Make text more readable on mobile */
+    small {
+        font-size: 12px;
+    }
+    
+    /* Fix badge sizing */
+    .badge {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+    
+    /* Better card header spacing */
+    .card-header {
+        padding: 15px;
+    }
+    
+    /* Fix input group sizing */
+    .input-group-sm .form-control {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+    
+    /* Make buttons more touch-friendly */
+    .btn {
+        min-height: 44px;
+        padding: 10px 15px;
+    }
+    
+    .btn-lg {
+        min-height: 50px;
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+}
+
+/* Additional mobile fixes for very small screens */
+@media (max-width: 576px) {
+    .container-fluid {
+        padding: 10px;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+    
+    .table th, .table td {
+        padding: 6px 2px;
+        font-size: 12px;
+    }
+    
+    .btn-sm {
+        padding: 6px 8px;
+        font-size: 12px;
+        min-width: 35px;
+    }
+    
+    /* Stack form elements vertically on very small screens */
+    .row .col-12 {
+        margin-bottom: 10px;
+    }
+}
+</style>
 <!-- Data for sales-variants.js -->
 <script type="application/json" id="products-data">{{ products|tojson }}</script>
 <script type="application/json" id="sizes-data">{{ sizes|tojson }}</script>
@@ -28,15 +176,15 @@ window.isClassicView = true; // For single items, will be set to false for multi
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-2">Create New Sale</h5>
+                <h5 class="card-title mb-3">Create New Sale</h5>
                 <!-- Mobile-friendly tab layout -->
-                <div class="d-flex flex-column flex-md-row gap-2">
-                    <div class="btn-group w-100 w-md-auto" role="group">
+                <div class="d-flex flex-column gap-2">
+                    <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary active" id="singleSaleBtn" onclick="toggleSaleType('single')">
-                            <i class="fas fa-shopping-cart me-1"></i><span class="d-none d-sm-inline">Single Item</span><span class="d-sm-none">Single</span>
+                            <i class="fas fa-shopping-cart me-2"></i>Single Item
                         </button>
                         <button type="button" class="btn btn-outline-primary" id="multipleSaleBtn" onclick="toggleSaleType('multiple')">
-                            <i class="fas fa-shopping-basket me-1"></i><span class="d-none d-sm-inline">Multiple Items</span><span class="d-sm-none">Multiple</span>
+                            <i class="fas fa-shopping-basket me-2"></i>Multiple Items
                         </button>
                     </div>
                 </div>
@@ -93,8 +241,11 @@ window.isClassicView = true; // For single items, will be set to false for multi
                         <div class="col-12 col-12 col-md-6">
                             <div class="mb-3">
                                 <label for="product_id" class="form-label">Select Product *</label>
-                                <div class="mb-2">
-                                    <div class="input-group input-group-sm">
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-search"></i>
+                                        </span>
                                         <input type="text" class="form-control" id="singleProductSearch" placeholder="Search by name, category, size, color, barcode..." onkeyup="debounceSingleSearch()">
                                         <button class="btn btn-outline-secondary" type="button" onclick="clearSingleSearch()" title="Clear search">
                                             <i class="fas fa-times"></i>
@@ -304,8 +455,9 @@ window.isClassicView = true; // For single items, will be set to false for multi
                             <!-- Dynamic Product Variants Container (Shown by default for multiple items) -->
                             <div id="productVariantsContainer">
                             <!-- Enhanced View Search -->
-                            <div class="mb-3">
-                                <div class="input-group input-group-sm">
+                            <div class="mb-4">
+                                <label class="form-label mb-2">Search Products</label>
+                                <div class="input-group">
                                     <span class="input-group-text">
                                         <i class="fas fa-search"></i>
                                     </span>
@@ -550,15 +702,15 @@ window.isClassicView = true; // For single items, will be set to false for multi
                     <table class="table table-hover" id="recentSalesTable">
                         <thead>
                             <tr>
-                                <th>Customer</th>
-                                <th>Product</th>
-                                <th>Size/Color</th>
-                                <th>Items</th>
-                                <th>Unit Price</th>
+                                <th class="d-none d-md-table-cell">Customer</th>
+                                <th class="d-none d-lg-table-cell">Product</th>
+                                <th class="d-none d-lg-table-cell">Size/Color</th>
+                                <th class="d-none d-md-table-cell">Items</th>
+                                <th class="d-none d-lg-table-cell">Unit Price</th>
                                 <th>Total</th>
-                                <th>Status</th>
-                                <th>Sold By</th>
-                                <th>Date</th>
+                                <th class="d-none d-md-table-cell">Status</th>
+                                <th class="d-none d-lg-table-cell">Sold By</th>
+                                <th class="d-none d-md-table-cell">Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -570,7 +722,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                 {% if first_item.get('is_multiple_items') %}
                                     <!-- Consolidated Multiple Items Order -->
                                     <tr {% if first_item.get('emergency_delivery') %}class="table-danger"{% elif first_item.get('delivered') %}class="table-success"{% endif %}>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             <strong>{{ customer_group['customer_name'] }}</strong>
                                             {% if first_item.get('emergency_delivery') %}
                                             <span class="badge bg-danger ms-1">EMERGENCY</span>
@@ -587,7 +739,7 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                             </small>
                                             {% endif %}
                                         </td>
-                                        <td>
+                                        <td class="d-none d-lg-table-cell">
                                             <strong>Multiple Items Order</strong><br>
                                             <small class="text-muted">
                                                 {% for order_item in first_item.get('items', [])[:3] %}
@@ -598,21 +750,21 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                                 {% endif %}
                                             </small>
                                         </td>
-                                        <td>
+                                        <td class="d-none d-lg-table-cell">
                                             <small class="text-muted">Various</small>
                                         </td>
-                                        <td>{{ first_item.get('total_quantity', 0) }} total</td>
-                                        <td>-</td>
+                                        <td class="d-none d-md-table-cell">{{ first_item.get('total_quantity', 0) }} total</td>
+                                        <td class="d-none d-lg-table-cell">-</td>
                                         <td><strong>৳{{ "%.2f"|format(first_item['total_price']) }}</strong></td>
-                                        <td>
+                                        <td class="d-none d-md-table-cell">
                                             {% if first_item.get('status') == 'returned' %}
                                                 <span class="badge bg-danger">Returned</span>
                                             {% else %}
                                                 <span class="badge bg-success">Completed</span>
                                             {% endif %}
                                         </td>
-                                        <td>{{ customer_group['sold_by'] }}</td>
-                                        <td>{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
+                                        <td class="d-none d-lg-table-cell">{{ customer_group['sold_by'] }}</td>
+                                        <td class="d-none d-md-table-cell">{{ customer_group['created_at'].strftime('%Y-%m-%d %H:%M') if customer_group['created_at'] else 'N/A' }}</td>
                                         <td>
                                             <!-- Mobile-friendly action buttons -->
                                             <div class="d-flex flex-wrap gap-1">
