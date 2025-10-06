@@ -3060,6 +3060,171 @@ def toggle_delivered(sale_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error toggling delivered status: {str(e)}'})
 
+# Edit Sale Order
+@app.route('/edit_sale/<sale_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('sales_customer')
+def edit_sale(sale_id):
+    try:
+        if request.method == 'GET':
+            # Get sale details for editing
+            sale_ref = db.collection('sales_orders').document(sale_id)
+            sale_doc = sale_ref.get()
+            
+            if not sale_doc.exists:
+                return jsonify({'success': False, 'message': 'Sale not found'})
+            
+            sale_data = sale_doc.to_dict()
+            sale_data['id'] = sale_doc.id
+            
+            # Get products, sizes, and colors for the form
+            products_ref = db.collection('products')
+            products = products_ref.get()
+            product_list = []
+            
+            for product in products:
+                product_data = product.to_dict()
+                product_data['id'] = product.id
+                product_list.append(product_data)
+            
+            sizes_ref = db.collection('sizes')
+            sizes = sizes_ref.get()
+            size_list = []
+            
+            for size in sizes:
+                size_data = size.to_dict()
+                size_data['id'] = size.id
+                size_list.append(size_data)
+            
+            colors_ref = db.collection('colors')
+            colors = colors_ref.get()
+            color_list = []
+            
+            for color in colors:
+                color_data = color.to_dict()
+                color_data['id'] = color.id
+                color_list.append(color_data)
+            
+            return jsonify({
+                'success': True, 
+                'sale': sale_data,
+                'products': product_list,
+                'sizes': size_list,
+                'colors': color_list
+            })
+        
+        elif request.method == 'POST':
+            # Update sale order
+            data = request.get_json()
+            
+            # Validate required fields
+            required_fields = ['customer_name', 'customer_phone', 'product_id', 'quantity']
+            for field in required_fields:
+                if not data.get(field):
+                    return jsonify({'success': False, 'message': f'{field.replace("_", " ").title()} is required'})
+            
+            # Get current sale data
+            sale_ref = db.collection('sales_orders').document(sale_id)
+            sale_doc = sale_ref.get()
+            
+            if not sale_doc.exists:
+                return jsonify({'success': False, 'message': 'Sale not found'})
+            
+            # Get product details
+            product_ref = db.collection('products').document(data['product_id'])
+            product_doc = product_ref.get()
+            
+            if not product_doc.exists:
+                return jsonify({'success': False, 'message': 'Product not found'})
+            
+            product_data = product_doc.to_dict()
+            quantity = int(data['quantity'])
+            delivery_charge = float(data.get('delivery_charge', 0))
+            
+            # Calculate new total
+            product_total = product_data['price'] * quantity
+            total_price = product_total + delivery_charge
+            
+            # Update sale order
+            update_data = {
+                'customer_name': data['customer_name'],
+                'customer_phone': data['customer_phone'],
+                'product_id': data['product_id'],
+                'product_name': product_data['name'],
+                'quantity': quantity,
+                'unit_price': product_data['price'],
+                'total_price': total_price,
+                'delivery_charge': delivery_charge,
+                'size': data.get('size', ''),
+                'color': data.get('color', ''),
+                'notes': data.get('notes', ''),
+                'emergency_delivery': data.get('emergency_delivery', False),
+                'updated_at': datetime.now(),
+                'updated_by': session['username']
+            }
+            
+            sale_ref.update(update_data)
+            
+            # Invalidate sales cache
+            cache['sales_orders']['data'] = None
+            
+            # Log activity
+            activity_data = {
+                'action': 'Sale Edited',
+                'details': f'Edited sale {sale_id} for customer {data["customer_name"]}',
+                'user': session['username'],
+                'timestamp': datetime.now()
+            }
+            db.collection('activities').add(activity_data)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Sale updated successfully!'
+            })
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error editing sale: {str(e)}'})
+
+# Delete Sale Order
+@app.route('/delete_sale/<sale_id>', methods=['POST'])
+@login_required
+@permission_required('sales_customer')
+def delete_sale(sale_id):
+    try:
+        # Get sale data before deletion for logging
+        sale_ref = db.collection('sales_orders').document(sale_id)
+        sale_doc = sale_ref.get()
+        
+        if not sale_doc.exists:
+            return jsonify({'success': False, 'message': 'Sale not found'})
+        
+        sale_data = sale_doc.to_dict()
+        customer_name = sale_data.get('customer_name', 'Unknown')
+        product_name = sale_data.get('product_name', 'Unknown')
+        
+        # Delete the sale
+        sale_ref.delete()
+        
+        # Invalidate sales cache
+        cache['sales_orders']['data'] = None
+        
+        # Log activity
+        activity_data = {
+            'action': 'Sale Deleted',
+            'details': f'Deleted sale {sale_id} for customer {customer_name} - Product: {product_name}',
+            'user': session['username'],
+            'timestamp': datetime.now()
+        }
+        db.collection('activities').add(activity_data)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Sale deleted successfully!'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error deleting sale: {str(e)}'})
+
 # Get Customer History
 @app.route('/get_customer_history')
 @login_required
