@@ -837,6 +837,9 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                                     <div class="w-100 mb-1">
                                                         <small class="text-muted">Returned on {{ first_item.get('returned_at', '').strftime('%Y-%m-%d') if first_item.get('returned_at') else 'N/A' }}</small>
                                                     </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="undoReturnSale('{{ first_item.id }}')" title="Undo Return">
+                                                        <i class="fas fa-redo"></i>
+                                                    </button>
                                                     <button type="button" class="btn btn-sm btn-outline-info" onclick="editSale('{{ first_item.id }}')" title="Edit Sale">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
@@ -946,6 +949,9 @@ window.isClassicView = true; // For single items, will be set to false for multi
                                                     <div class="w-100 mb-1">
                                                         <small class="text-muted">Returned on {{ item.get('returned_at', '').strftime('%Y-%m-%d') if item.get('returned_at') else 'N/A' }}</small>
                                                     </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="undoReturnSale('{{ item.id }}')" title="Undo Return">
+                                                        <i class="fas fa-redo"></i>
+                                                    </button>
                                                     <button type="button" class="btn btn-sm btn-outline-info" onclick="editSale('{{ item.id }}')" title="Edit Sale">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
@@ -2466,6 +2472,47 @@ function markAsReturnedSimple(saleId, buttonElement) {
     });
 }
 
+function undoReturnSale(saleId) {
+    // Confirm the action
+    if (!confirm('Are you sure you want to undo this return? The sale will be marked as completed again.')) {
+        return;
+    }
+    
+    // Show loading on the button
+    const buttonElement = event.target.closest('button');
+    const originalHtml = buttonElement.innerHTML;
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    buttonElement.disabled = true;
+    
+    // Make the request to undo return
+    fetch(`/undo_sale_return/${saleId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Show success message
+            showNotification('Sale return undone successfully!', 'success');
+            
+            // Reload the page to reflect the change
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            throw new Error('Network response was not ok');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error undoing sale return', 'danger');
+        
+        // Revert button state on error
+        buttonElement.innerHTML = originalHtml;
+        buttonElement.disabled = false;
+    });
+}
 
 function showNotification(message, type) {
     // Create notification element

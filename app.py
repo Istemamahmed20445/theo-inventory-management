@@ -2967,6 +2967,41 @@ def mark_sale_returned(sale_id):
     
     return redirect(url_for('sales'))
 
+# Undo Sale Return (Mark as Completed)
+@app.route('/undo_sale_return/<sale_id>', methods=['POST'])
+@login_required
+@permission_required('sales_customer')
+def undo_sale_return(sale_id):
+    try:
+        # Update the sale status back to completed
+        sale_ref = db.collection('sales_orders').document(sale_id)
+        sale_ref.update({
+            'status': 'completed',
+            'returned_at': None,
+            'returned_by': None,
+            'updated_at': datetime.now(),
+            'updated_by': session['username']
+        })
+        
+        # Invalidate sales cache to reflect changes immediately
+        cache['sales_orders']['data'] = None
+        
+        # Log activity
+        activity_data = {
+            'action': 'Sale Return Undone',
+            'details': f'Sale {sale_id} return undone - marked as completed',
+            'user': session['username'],
+            'timestamp': datetime.now()
+        }
+        db.collection('activities').add(activity_data)
+        
+        flash('Sale return undone successfully!', 'success')
+        
+    except Exception as e:
+        flash(f'Error undoing sale return: {str(e)}', 'error')
+    
+    return redirect(url_for('sales'))
+
 # Toggle Emergency Delivery
 @app.route('/toggle_emergency_delivery/<sale_id>', methods=['POST'])
 @login_required
